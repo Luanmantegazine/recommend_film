@@ -32,14 +32,14 @@ def home():
     return {"message": "Webhook subscriber is running!"}
 
 
-@app.post("/review/notification")          # ← rota usada pelo publisher
-@app.post("/review/{anything:path}")       # ← aceita /review/qualquer/coisa
+@app.post("/review")
+@app.post("/review/notification")
 async def webhook_handler(
     request: Request,
     x_webhook_event: Optional[str] = Header(None),
     x_webhook_signature_256: Optional[str] = Header(None),
 ):
-    """Processa eventos vindos do WebhookPublisher."""
+
     body_bytes = await request.body()
     logger.info("⬇️  Recebido evento=%s  bytes=%d", x_webhook_event, len(body_bytes))
 
@@ -51,16 +51,13 @@ async def webhook_handler(
     if not verify_signature(body_bytes, x_webhook_signature_256):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid signature")
 
-    # ── converte corpo para dict ─────────────────────────────────────────
     try:
         payload = json.loads(body_bytes)
     except json.JSONDecodeError:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Body is not valid JSON")
 
-    # Aqui você pode persistir no banco, enfileirar, etc.
     logger.info("✅ Assinatura válida. Payload: %s", payload)
 
-    # Exemplo simples de resposta dependendo do tipo de evento
     event = x_webhook_event.lower()
     if event == "review_update":
         # seu processamento…

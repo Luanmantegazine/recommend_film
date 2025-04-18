@@ -1,0 +1,77 @@
+import json
+import logging
+import hmac
+import hashlib
+from typing import Optional, Dict
+
+from fastapi import FastAPI, Request, Header, HTTPException, status
+from fastapi.responses import JSONResponse
+import uvicorn
+
+WEBHOOK_SECRET = "12345"
+
+logger = logging.getLogger("generic_webhook")
+logging.basicConfig(level=logging.INFO)
+
+
+def verify_signature(body: bytes, header_sig: str) -> bool:
+    if not header_sig:
+        return False
+    if header_sig.startswith("sha256="):
+        header_sig = header_sig.split("sha256=")[1]
+
+    expected = hmac.new(WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, header_sig)
+
+
+app = FastAPI()
+
+
+@app.get("/", response_model=Dict[str, str])
+def home():
+    return {"message": "Webhook subscriber is running!"}
+
+
+@app.post("/review/notification")          # ← rota usada pelo publisher
+@app.post("/review/{anything:path}")       # ← aceita /review/qualquer/coisa
+async def webhook_handler(
+    request: Request,
+    x_webhook_event: Optional[str] = Header(None),
+    x_webhook_signature_256: Optional[str] = Header(None),
+):
+    """Processa eventos vindos do WebhookPublisher."""
+    body_bytes = await request.body()
+    logger.info("⬇️  Recebido evento=%s  bytes=%d", x_webhook_event, len(body_bytes))
+
+    # ── valida headers ────────────────────────────────────────────────────
+    if not x_webhook_event:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Missing X-Webhook-Event")
+    if not x_webhook_signature_256:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Missing X-Webhook-Signature-256")
+    if not verify_signature(body_bytes, x_webhook_signature_256):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid signature")
+
+    # ── converte corpo para dict ─────────────────────────────────────────
+    try:
+        payload = json.loads(body_bytes)
+    except json.JSONDecodeError:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Body is not valid JSON")
+
+    # Aqui você pode persistir no banco, enfileirar, etc.
+    logger.info("✅ Assinatura válida. Payload: %s", payload)
+
+    # Exemplo simples de resposta dependendo do tipo de evento
+    event = x_webhook_event.lower()
+    if event == "review_update":
+        # seu processamento…
+        return JSONResponse({"message": "Review recebido com sucesso!"})
+
+    logger.warning("Evento não suportado: %s", event)
+    return JSONResponse(
+        status_code=status.HTTP_202_ACCEPTED,  # aceito, mas sem tratamento
+        content={"message": f"Evento {event} aceito sem processamento específico."},
+    )
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

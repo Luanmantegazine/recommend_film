@@ -36,19 +36,19 @@ def home():
 @app.post("/review/notification")
 async def webhook_handler(
     request: Request,
-    x_webhook_event: Optional[str] = Header(None),
-    x_webhook_signature_256: Optional[str] = Header(None),
+    x_vurdere_event: Optional[str] = Header(None),
+    x_vurdere_signature_256: Optional[str] = Header(None),
 ):
 
     body_bytes = await request.body()
-    logger.info("⬇️  Recebido evento=%s  bytes=%d", x_webhook_event, len(body_bytes))
+    logger.info("⬇️  Recebido evento=%s  bytes=%d", x_vurdere_event, len(body_bytes))
 
     # ── valida headers ────────────────────────────────────────────────────
-    if not x_webhook_event:
+    if not x_vurdere_event:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Missing X-Webhook-Event")
-    if not x_webhook_signature_256:
+    if not x_vurdere_signature_256:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Missing X-Webhook-Signature-256")
-    if not verify_signature(body_bytes, x_webhook_signature_256):
+    if not verify_signature(body_bytes, x_vurdere_signature_256):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid signature")
 
     try:
@@ -58,7 +58,7 @@ async def webhook_handler(
 
     logger.info("✅ Assinatura válida. Payload: %s", payload)
 
-    event = x_webhook_event.lower()
+    event = x_vurdere_event.lower()
     if event == "review_update":
         # seu processamento…
         return JSONResponse({"message": "Review recebido com sucesso!"})

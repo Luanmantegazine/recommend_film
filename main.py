@@ -32,8 +32,8 @@ def home():
     return {"message": "Webhook subscriber is running!"}
 
 
-@app.post("/review")
-@app.post("/review/notification")
+@app.get("/review")
+@app.get("/review/notification")
 async def webhook_handler(
     request: Request,
     x_vurdere_event: Optional[str] = Header(None),

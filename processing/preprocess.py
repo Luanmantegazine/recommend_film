@@ -118,6 +118,11 @@ def read_csv_to_df() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
 class Recommender:
 
+    movies_raw: pd.DataFrame
+    movies_vec: pd.DataFrame
+    similarity: np.ndarray
+    cv: CountVectorizer
+
     def __init__(self) -> None:
         self.movies_raw, self.movies_vec, _ = read_csv_to_df()
         self._build_vectors()

@@ -1,108 +1,66 @@
 import os
-from processing import preprocess
-import pickle
+import logging
+from pathlib import Path
+from typing import Tuple
+from functools import lru_cache
+import joblib
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from processing import preprocess
 
-class Main():
+logger = logging.getLogger(__name__)
 
-    def __enter__(self):
-        # Initialization code, if needed
-        return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        # Cleanup code, if needed
-        pass
+class Main:
+    DATA_DIR = Path("Files")
+    DATA_DIR.mkdir(exist_ok=True)
 
-    def __init__(self):
-        self.new_df = None
-        self.movies = None
-        self.movies2 = None
+    def __init__(self) -> None:
+        self.new_df: pd.Dataframe | None = None
+        self.movies: pd.Dataframe | None = None
+        self.movies2: pd.Dataframe | None = None
 
-    def getter(self):
+    def get_df(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        if self.new_df is None:
+            self.load_data()
         return self.new_df, self.movies, self.movies2
 
-    def get_df(self):
-        pickle_file_path = r'Files/new_df_dict.pkl'
+    def load_data(self) -> None:
+        df_path = self.DATA_DIR / 'new_dif_dict.pkl'
 
-        # Checking if preprocessed dataframe already exists or not
-        if os.path.exists(pickle_file_path):
-
-            # Read the Pickle file and load the dictionary -- 3 times
-            # For the movies dataframe
-            pickle_file_path = r'Files/movies_dict.pkl'
-            with open(pickle_file_path, 'rb') as pickle_file:
-                loaded_dict = pickle.load(pickle_file)
-
-            self.movies = pd.DataFrame.from_dict(loaded_dict)
-
-            # Now, for the movies2 doing the same work
-            pickle_file_path = r'Files/movies2_dict.pkl'
-            with open(pickle_file_path, 'rb') as pickle_file:
-                loaded_dict_2 = pickle.load(pickle_file)
-
-            self.movies2 = pd.DataFrame.from_dict(loaded_dict_2)
-
-            # Now, For new_df
-            pickle_file_path = r'Files/new_df_dict.pkl'
-            with open(pickle_file_path, 'rb') as pickle_file:
-                loaded_dict = pickle.load(pickle_file)
-
-            self.new_df = pd.DataFrame.from_dict(loaded_dict)
-
+        if df_path.exists():
+            logger.info("Lendo Dataframes")
+            self.new_df = pd.read_parquet(df_path)
+            self.movies = pd.read_parquet(self.DATA_DIR / "movies.parquet")
+            self.movies2 = pd.read_parquet(self.DATA_DIR / "movies2.parquet")
         else:
+            logger.info("Cache nao encontrado: rodando preprocess...")
             self.movies, self.new_df, self.movies2 = preprocess.read_csv_to_df()
+            self.movies.to_parquet(self.DATA_DIR / "movies.parquet", index=False)
+            self.movies2.to_parquet(self.DATA_DIR / "movies2.parquet", index=False)
+            self.new_df.to_parquet(df_path, index=False)
 
-            # Converting to pickle file (dumping file)
-            # Convert the DataFrame to a dictionary
+    @staticmethod
+    @lru_cache(maxsize=8)
+    def _vectorise(series: pd.Series) -> pd.DataFrame:
+        cv = CountVectorizer(max_features=5_000, stop_words="english")
+        matrix = cv.fit_transform(series).toarray()
+        return cosine_similarity(matrix)
 
-            #  Now, doing for the movies dataframw
-            movies_dict = self.movies.to_dict()
+    def _ensure_similarity(self, column: str) -> None:
+        sim_file = self.DATA_DIR / f"sim_{column}.joblib"
+        if sim_file.exists():
+            return
+        logger.info("Calculando matriz de similaridade para %s ...", column)
+        sim = self._vectorise(self.new_df[column])
+        joblib.dump(sim, sim_file, compress=3)
 
-            pickle_file_path = r'Files/movies_dict.pkl'
-            with open(pickle_file_path, 'wb') as pickle_file:
-                pickle.dump(movies_dict, pickle_file)
+    def prepare_all_similarities(self) -> None:
+        self.load_data()
+        for feature in ("tags", "genres", "keywords", "tcast", "tproduction_comp"):
+            self._ensure_similarity(feature)
 
-            #  Now, doing for the movies2 dataframe
-            movies2_dict = self.movies2.to_dict()
 
-            pickle_file_path = r'Files/movies2_dict.pkl'
-            with open(pickle_file_path, 'wb') as pickle_file:
-                pickle.dump(movies2_dict, pickle_file)
 
-            # For the new_df
-            df_dict = self.new_df.to_dict()
 
-            # Save the dictionary to a Pickle file
-            pickle_file_path = r'Files/new_df_dict.pkl'
-            with open(pickle_file_path, 'wb') as pickle_file:
-                pickle.dump(df_dict, pickle_file)
-
-    def vectorise(self, col_name):
-        # Model to vectorise the words using CountVectorizer (Bag of words)
-        cv = CountVectorizer(max_features=5000, stop_words='english')
-        vec_tags = cv.fit_transform(self.new_df[col_name]).toarray()
-        sim_bt = cosine_similarity(vec_tags)
-        return sim_bt
-
-    def get_similarity(self, col_name):
-        pickle_file_path = fr'Files/similarity_tags_{col_name}.pkl'
-        if os.path.exists(pickle_file_path):
-            pass
-        else:
-            similarity_tags = self.vectorise(col_name)
-
-            # Converting to pickle file (dumping file)
-            # Save the dictionary to a Pickle file
-            with open(pickle_file_path, 'wb') as pickle_file:
-                pickle.dump(similarity_tags, pickle_file)
-
-    def main_(self):
-        # This is to make sure that resources are available.
-        self.get_df()
-        self.get_similarity('tags')
-        self.get_similarity('genres')
-        self.get_similarity('keywords')
-        self.get_similarity('tcast')
-        self.get_similarity('tprduction_comp')

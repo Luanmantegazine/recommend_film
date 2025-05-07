@@ -52,47 +52,79 @@ def _normalize_tokens(tokens: List[str]) -> List[str]:
     return clean
 
 
+def read_csv_to_df() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    movies = pd.read_csv(
+        MOVIES_CSV,
+        converters={
+            "genres": json.loads,
+            "keywords": json.loads,
+            "production_companies": json.loads,
+        },
+    )
+    credits = pd.read_csv(
+        CREDITS_CSV,
+        converters={"cast": json.loads, "crew": json.loads},
+    )
+
+    movies = movies.merge(credits, on="title", how="inner")
+    movies = movies.dropna(subset=["overview"])
+
+    movies["genres"] = movies["genres"].apply(lambda l: [g["name"] for g in l])
+    movies["keywords"] = movies["keywords"].apply(lambda l: [k["name"] for k in l])
+    movies["top_cast"] = movies["cast"].apply(lambda l: [c["name"] for c in l[:10]])
+    movies["director"] = movies["crew"].apply(
+        lambda l: next((c["name"] for c in l if c.get("job") == "Director"), "")
+    )
+    movies["prod_comp"] = movies["production_companies"].apply(
+        lambda l: [c["name"] for c in l]
+    )
+
+    movies["tokens"] = (
+            movies["overview"].str.split()
+            + movies["genres"]
+            + movies["keywords"]
+            + movies["top_cast"]
+            + movies["prod_comp"]
+    ).apply(_normalize_tokens)
+
+    new_df = movies[
+        ["movie_id", "title", "tokens", "genres", "keywords", "top_cast", "prod_comp"]
+    ].copy()
+    new_df["genres"] = new_df["genres"].str.join(" ").str.lower()
+    new_df["keywords"] = new_df["keywords"].apply(lambda l: " ".join(l))
+    new_df["tcast"] = new_df["top_cast"].apply(lambda l: " ".join(l).lower())
+    new_df["tproduction_comp"] = new_df["prod_comp"].apply(lambda l: " ".join(l).lower())
+    new_df["tags"] = new_df["tokens"].apply(lambda l: " ".join(l))
+
+    movies2 = movies[
+        [
+            "movie_id",
+            "title",
+            "budget",
+            "overview",
+            "popularity",
+            "release_date",
+            "revenue",
+            "runtime",
+            "spoken_languages",
+            "status",
+            "vote_average",
+            "vote_count",
+        ]
+    ].copy()
+
+    return movies, new_df, movies2
+
+
 class Recommender:
 
     def __init__(self) -> None:
-        self.movies_raw: pd.DataFrame
+        self.movies_raw = pd.DataFrame
         self.movies_vec: pd.DataFrame
         self.cv: CountVectorizer
         self.similarity: np.ndarray
-        self._load_data()
+        read_csv_to_df()
         self._build_vectors()
-
-    def _load_data(self) -> None:
-        movies = pd.read_csv(MOVIES_CSV, converters={
-            "genres": json.loads,
-            "keywords": json.loads,
-            "production_companies": json.loads
-        })
-        credits = pd.read_csv(CREDITS_CSV, converters={
-            "cast": json.loads,
-            "crew": json.loads
-        })
-        df = movies.merge(credits, on="title", how="inner").dropna(subset=["overview"])
-
-        df["genres"] = df["genres"].apply(lambda l: [g["name"] for g in l])
-        df["keywords"] = df["keywords"].apply(lambda l: [k["name"] for k in l])
-        df["top_cast"] = df["cast"].apply(lambda l: [c["name"] for c in l[:10]])
-        df["director"] = df["crew"].apply(
-            lambda l: next((c["name"] for c in l if c.get("job") == "Director"), "")
-        )
-        df["prod_comp"] = df["production_companies"].apply(lambda l: [c["name"] for c in l])
-
-        df["tokens"] = (
-                df["overview"].str.split()
-                + df["genres"]
-                + df["keywords"]
-                + df["top_cast"]
-                + df["prod_comp"]
-        ).apply(_normalize_tokens)
-
-        self.movies_raw = df[
-            ["movie_id", "title", "tokens", "genres", "keywords", "top_cast", "prod_comp"]
-        ].reset_index(drop=True)
 
     def _build_vectors(self) -> None:
         self.cv = CountVectorizer(

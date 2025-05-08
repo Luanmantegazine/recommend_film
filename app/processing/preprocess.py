@@ -117,7 +117,6 @@ def read_csv_to_df() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
 
 class Recommender:
-
     movies_raw: pd.DataFrame
     movies_vec: pd.DataFrame
     similarity: np.ndarray

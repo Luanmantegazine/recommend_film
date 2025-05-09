@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="Movie Recommender API",
+    openapi_prefix="/api"
 )
 
 app.add_middleware(

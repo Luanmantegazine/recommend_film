@@ -2,6 +2,7 @@ import React, { useState } from "react";
 
 const CastToggle = ({ photo, bio }) => {
   const [open, setOpen] = useState(false);
+
   return (
     <div className="text-center">
       <img
@@ -15,7 +16,11 @@ const CastToggle = ({ photo, bio }) => {
       >
         {open ? "Hide" : "Show"} More
       </button>
-      {open && <p className="text-xs mt-1 max-h-40 overflow-auto">{bio}</p>}
+      {open && (
+        <p className="text-xs mt-1 max-h-40 overflow-auto">
+          {bio}
+        </p>
+      )}
     </div>
   );
 };

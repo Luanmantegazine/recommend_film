@@ -5,9 +5,17 @@ from models import MovieCompact, MovieDetail, RecResp
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 from app.processing.preprocess import Recommender, read_csv_to_df
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="Movie Recommender API",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173/"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 rec_engine = Recommender()

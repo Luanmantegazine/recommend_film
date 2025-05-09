@@ -11,4 +11,3 @@ export function useRecommend({ title, titleId, topK = 25 }) {
     staleTime: 1000 * 60 * 10,
   });
 }
-

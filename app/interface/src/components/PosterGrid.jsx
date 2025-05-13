@@ -1,17 +1,27 @@
 import React from "react";
 import MovieCard from "./MovieCard";
 
-const PosterGrid = ({ items, onClick }) => (
-  <div className="flex overflow-x-auto space-x-3 pb-4 scrollbar-thin scrollbar-thumb-slate-400">
-    {items.map((m) => (
-      <MovieCard
-        key={m.movie_id || m.title}
-        title={m.movie || m.title}
-        poster={m.poster}
-        onClick={() => onClick?.(m)}
-      />
-    ))}
-  </div>
-);
-
-export default PosterGrid;
+/**
+ * Galeria horizontal rolável de pôsteres.
+ *
+ * @param {Array}  items   [{title,poster, …}]
+ * @param {Func}   onClick callback(item)
+ * @param {String} className extra Tailwind classes
+ */
+export default function PosterGrid({ items, onClick, className = '' }) {
+  return (
+    <div
+      className={`flex flex-nowrap gap-4 overflow-x-auto px-4 ${className}`}
+      style={{ scrollSnapType: 'x mandatory' }}
+    >
+      {items.map((m) => (
+        <MovieCard
+          key={m.title}
+          title={m.title}
+          poster={m.poster}
+          onClick={() => onClick?.(m)}
+        />
+      ))}
+    </div>
+  );
+}

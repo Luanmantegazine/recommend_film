@@ -4,7 +4,8 @@ import path from 'path';
 
 export default defineConfig({
   root: path.resolve(__dirname, 'app/interface'),
-  plugins: [react({
+  plugins: [
+      react({
     include: [/\.[jt]sx?$/]
   })],
   resolve: {

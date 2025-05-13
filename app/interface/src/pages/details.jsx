@@ -15,29 +15,48 @@ const Details = () => {
   if (!data) return <p className="text-center py-8">Not found.</p>;
 
   return (
-    <div className="max-w-screen-lg mx-auto p-4 space-y-6">
-      <div className="flex flex-col md:flex-row gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <img
-          src={data.poster || "/img/placeholder.jpg"}
-          alt={data.title}
-          className="w-full md:w-64 rounded-2xl shadow-lg"
+            src={data.poster}
+            alt={data.title}
+            className="w-full rounded-xl shadow-md object-cover aspect-[2/3]"
         />
-        <div className="flex-1 space-y-2">
-          <h1 className="text-3xl font-bold">{data.title}</h1>
-          <p className="text-sm text-gray-400">{data.genres.join(", ")}</p>
-          <p className="pt-4 leading-relaxed">{data.overview}</p>
+
+        <div className="md:col-span-2 space-y-4">
+          <h1 className="text-2xl font-bold">{data.title}</h1>
+
+          <div className="flex flex-wrap gap-2">
+            {data.genres.map(g => (
+                <span
+                    key={g}
+                    className="px-2 py-0.5 rounded-full text-xs bg-sky-100 text-sky-800"
+                >
+          {g}
+        </span>
+            ))}
+          </div>
+
+          <p className="text-sm leading-relaxed">{data.overview}</p>
+
+          <table className="text-sm">
+            <tbody>
+            <tr>
+              <td className="pr-4 text-slate-500">Diretor</td>
+              <td>{data.director}</td>
+            </tr>
+            <tr>
+              <td className="pr-4 text-slate-500">Duração</td>
+              <td>{data.runtime} min</td>
+            </tr>
+            <tr>
+              <td className="pr-4 text-slate-500">Lançamento</td>
+              <td>{new Date(data.release_date).toLocaleDateString()}</td>
+            </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <section>
-        <h2 className="text-xl font-semibold mb-2">Cast</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          {data.cast.slice(0, 5).map((c) => (
-            <CastToggle key={c.id} photo={c.photo} bio={c.bio} />
-          ))}
-        </div>
-      </section>
-    </div>
   );
 };
 

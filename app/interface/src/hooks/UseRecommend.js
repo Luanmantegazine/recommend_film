@@ -1,15 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import api from '../api.js'
+import { fetchRecommend} from "@/hooks/fetchRecommend.js";
 
-export function useRecommend({title, topK = 5 } = {}) {
+export function useRecommend(title, topK = 5) {
   return useQuery({
-    queryKey: ['recommend',title, topK],
-    queryFn: async ({ queryKey }) => {
-      const { data } = await api.get('/recommend', {
-        params: {title, top_k: topK }
-      });
-      return data;
-    },
+    queryKey: ['recommend', title, topK],
+    queryFn: () => fetchRecommend({ title, topK }),
     enabled: false,
     staleTime: 1000 * 60 * 10,
   });

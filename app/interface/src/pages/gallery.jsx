@@ -18,7 +18,7 @@ const Gallery = () => {
       {movies && (
         <PosterGrid
           items={movies.map((m) => ({ ...m, poster: m.poster }))}
-          onClick={(m) => navigate(`/movie/${m.movieId}`)}
+          onClick={(m) => navigate(`/movie/${m.title}`)}
         />
       )}
       <Pagination

@@ -1,30 +1,50 @@
-import React, { useState } from "react";
-import Select from "react-select";
-import { useMovies } from "../hooks/useMovies";
-import { useRecommend } from "../hooks/useRecommend";
-import PosterGrid from "../components/PosterGrid";
+import { useState } from 'react'
+import { useMovies } from '@/hooks/useMovies'
+import { useRecommend } from '@/hooks/useRecommend'
+import PosterGrid from '@/components/PosterGrid'
+import Select from 'react-select'
 
-const Home = () => {
-  const [selected, setSelected] = useState(null);
-  const { data: options } = useMovies(0, 500, true); // retrieve first 500 titles for dropdown
-  const { data: recs, isFetching } = useRecommend({ title: selected?.movie });
+export default function Home() {
+  const [title, setTitle] = useState('')
+  const { data: options = [] } = useMovies(0, 100, true)
+  const {
+    data: recs,
+    isFetching,
+    refetch,
+    isFetched,
+    error
+  } = useRecommend(title, 5)
 
-  const selectOptions = options?.map((o) => ({ value: o.movie, label: o.movie }));
+  const handleRecommend = () => {
+    if (!title) return
+    refetch({
+      queryKey: ['recommend', 5, { title }]
+    })
+  }
 
   return (
-    <div className="max-w-screen-xl mx-auto p-4 space-y-6">
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Movie Recommender</h1>
+
       <Select
-        options={selectOptions}
-        onChange={(o) => setSelected({ movie: o.value })}
-        placeholder="Choose a movie..."
-        isClearable
-        className="mb-4"
+        options={options.map(o => ({ value: o.movie, label: o.movie }))}
+        onChange={opt => setTitle(opt.value)}
+        placeholder="Select a movie..."
       />
 
-      {isFetching && <p className="text-center">Loading recommendations…</p>}
-      {recs && <PosterGrid items={recs} onClick={(m)=>window.location.href=`/movie/${m.title}`}/>}
-    </div>
-  );
-};
+      <button
+        onClick={handleRecommend}
+        className="mt-2 px-4 py-2 bg-sky-600 text-white rounded"
+      >
+        Recommend
+      </button>
 
-export default Home;
+      {isFetching && <p>Loading recommendations…</p>}
+      {error && <p className="text-red-600">Erro: {error.message}</p>}
+
+      {isFetched && recs && (
+        <PosterGrid items={recs} onClick={m => console.log('clicked', m)} />
+      )}
+    </div>
+  )
+}

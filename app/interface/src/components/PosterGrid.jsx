@@ -2,14 +2,15 @@ import React from "react";
 import MovieCard from "./MovieCard";
 
 const PosterGrid = ({ items, onClick }) => (
-  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+  <div className="flex space-x-4 overflow-x-auto py-4">
     {items.map((m) => (
-      <MovieCard
-        key={m.movie_id || m.title}
-        title={m.movie || m.title}
-        poster={m.poster}
-        onClick={() => onClick?.(m)}
-      />
+      <div key={m.title_id || m.title} className="flex-shrink-0 w-24">
+        <MovieCard
+          title={m.movie || m.title}
+          poster={m.poster}
+          onClick={() => onClick?.(m)}
+        />
+      </div>
     ))}
   </div>
 );

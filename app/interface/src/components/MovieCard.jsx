@@ -1,18 +1,17 @@
 import React from "react";
 
-const MovieCard = ({ title, poster, onClick }) => (
-  <div
-    className="cursor-pointer flex flex-col items-center gap-2"
-    onClick={onClick}
-  >
-    <img
-      src={poster || "/img/placeholder.jpg"}
-      alt={title}
-      className="w-full aspect-[2/3] object-cover rounded-2xl shadow-md"
-      loading="lazy"
-    />
-    <span className="text-sm text-center line-clamp-2">{title}</span>
-  </div>
-);
-
-export default MovieCard;
+export default function MovieCard ({ title, poster, onClick }) {
+  return (
+      <div
+          className="cursor-pointer rounded overflow-hidden shadow hover:shadow-lg transition-shadow"
+          onClick={onClick}
+      >
+        <img
+            src={poster}
+            alt={title}
+            className="w-full h-32 object-cover"
+        />
+        <span className="p-2 text-sm text-center">{title}</span>
+      </div>
+  )
+}

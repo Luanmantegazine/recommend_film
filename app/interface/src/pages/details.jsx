@@ -3,10 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchDetails } from '@/hooks/fetchDetails';
 
 export default function Details() {
-  const { id } = useParams();
+  const { movieId } = useParams();
   const navigate = useNavigate();
 
-  const { data, isLoading, error } = useQuery(['details', data.title_id], () => fetchDetails(data.title_id));
+  const { data, isLoading, error } = useQuery(['details', data.movieId], () => fetchDetails(data.movieId));
 
   if (isLoading) return <p className="p-4">Loading…</p>;
   if (error)     return <p className="p-4 text-red-600">Erro ao carregar detalhes.</p>;

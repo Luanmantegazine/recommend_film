@@ -8,12 +8,7 @@ import Select from 'react-select';
 export default function Home() {
   const [title, setTitle] = useState('');
   const { data: options = [] } = useMovies(0, 100, true);
-  const {
-    data: recs,
-    isFetching,
-    refetch,
-    isFetched,
-  } = useRecommend(title, 5);
+  const {data: recs, isFetching, refetch, isFetched,} = useRecommend(title, 5);
 
   const handleRecommend = () => {
     if (!title) return;
@@ -26,7 +21,6 @@ export default function Home() {
                Movie Recommender
            </h1>
 
-           {/* seletor centralizado */}
            <div className="w-full max-w-md px-4">
                <Select
                    options={options.map(o => ({value: o.movie, label: o.movie}))}
@@ -37,7 +31,6 @@ export default function Home() {
                    isSearchable
                />
 
-               {/* botão estilizado */}
                <button
                    onClick={handleRecommend}
                    disabled={!title || isFetching}
@@ -52,7 +45,6 @@ export default function Home() {
            {isFetched && recs?.length > 0 && (
                <PosterGrid
                    items={recs}
-                   onClick={m => console.log('clicked', m)}
                    className="mt-8"
                />
            )}

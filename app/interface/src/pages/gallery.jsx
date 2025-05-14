@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useMovies } from "../hooks/useMovies";
+import { useMovies } from "@/hooks/useMovies";
 import PosterGrid from "../components/PosterGrid";
 import Pagination from "../components/Pagination";
 import { useNavigate } from "react-router-dom";

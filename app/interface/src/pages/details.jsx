@@ -6,7 +6,7 @@ export default function Details() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { data, isLoading, error } = useQuery(['details', id], () => fetchDetails(id));
+  const { data, isLoading, error } = useQuery(['details', data.title_id], () => fetchDetails(data.title_id));
 
   if (isLoading) return <p className="p-4">Loading…</p>;
   if (error)     return <p className="p-4 text-red-600">Erro ao carregar detalhes.</p>;

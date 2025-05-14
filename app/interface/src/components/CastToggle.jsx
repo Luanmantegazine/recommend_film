@@ -1,28 +1,33 @@
-import React, { useState } from "react";
+import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { fetchDetails } from '@/hooks/fetchDetails';
 
-const CastToggle = ({ photo, bio }) => {
+export default function MovieToggle({ movieId, title, poster }) {
   const [open, setOpen] = useState(false);
+  const { data, isLoading } = useQuery(
+    ['details', movieId],
+    () => fetchDetails(movieId),
+    { enabled: open }
+  );
 
   return (
-    <div className="text-center">
-      <img
-        src={photo || "/img/avatar-placeholder.png"}
-        alt="cast"
-        className="w-32 h-44 object-cover rounded-xl mx-auto shadow"
-      />
-      <button
-        className="mt-2 text-sky-600 text-xs"
-        onClick={() => setOpen((o) => !o)}
+    <div className="border-b pb-2">
+      <div
+        className="flex gap-2 items-center cursor-pointer"
+        onClick={() => setOpen(o => !o)}
       >
-        {open ? "Hide" : "Show"} More
-      </button>
+        <img src={poster} alt={title} className="w-10 h-14 object-cover" />
+        <span className="font-semibold">{title}</span>
+        <span className="ml-auto text-sky-600 text-sm">
+          {open ? 'Hide' : 'Show'} more
+        </span>
+      </div>
+
       {open && (
-        <p className="text-xs mt-1 max-h-40 overflow-auto">
-          {bio}
-        </p>
+        <div className="mt-2 text-sm">
+          {isLoading ? 'Loading…' : data.overview}
+        </div>
       )}
     </div>
   );
-};
-
-export default CastToggle;
+}

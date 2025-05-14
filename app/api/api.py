@@ -4,7 +4,7 @@ import uvicorn
 from models import MovieCompact, MovieDetail, RecResp
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
-from app.processing.preprocess import Recommender, read_csv_to_df
+from app.api.processing.preprocess import Recommender, read_csv_to_df
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(

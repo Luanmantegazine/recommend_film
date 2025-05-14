@@ -1,63 +1,40 @@
-import React from "react";
-import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import client from "../api";
-import CastToggle from "../components/CastToggle";
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { fetchDetails } from '@/hooks/fetchDetails';
 
-const Details = () => {
+export default function Details() {
   const { id } = useParams();
-  const { data, isLoading } = useQuery(["details", id], async () => {
-    const { data } = await client.get(`/details/${id}`);
-    return data;
-  });
+  const navigate = useNavigate();
 
-  if (isLoading) return <p className="text-center py-8">Loading…</p>;
-  if (!data) return <p className="text-center py-8">Not found.</p>;
+  const { data, isLoading, error } = useQuery(['details', id], () => fetchDetails(id));
+
+  if (isLoading) return <p className="p-4">Loading…</p>;
+  if (error)     return <p className="p-4 text-red-600">Erro ao carregar detalhes.</p>;
 
   return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="max-w-4xl mx-auto p-4">
+      <button onClick={() => navigate(-1)} className="mb-4 text-sky-600">
+        ← Voltar
+      </button>
+
+      <div className="flex flex-col md:flex-row gap-4">
         <img
-            src={data.poster}
-            alt={data.title}
-            className="w-full rounded-xl shadow-md object-cover aspect-[2/3]"
+          src={data.poster || '/img/placeholder.jpg'}
+          alt={data.title}
+          className="w-full md:w-56 h-80 object-cover rounded"
         />
 
-        <div className="md:col-span-2 space-y-4">
-          <h1 className="text-2xl font-bold">{data.title}</h1>
+        <div>
+          <h2 className="text-2xl font-bold mb-2">{data.title}</h2>
+          <p className="text-sm mb-2">{data.overview}</p>
 
-          <div className="flex flex-wrap gap-2">
-            {data.genres.map(g => (
-                <span
-                    key={g}
-                    className="px-2 py-0.5 rounded-full text-xs bg-sky-100 text-sky-800"
-                >
-          {g}
-        </span>
-            ))}
+          <div className="text-sm">
+            <strong>Gêneros:</strong> {data.genres.join(', ')} <br />
+            <strong>Director:</strong> {data.director} <br />
+            <strong>Elenco:</strong> {data.cast.slice(0, 5).join(', ')}
           </div>
-
-          <p className="text-sm leading-relaxed">{data.overview}</p>
-
-          <table className="text-sm">
-            <tbody>
-            <tr>
-              <td className="pr-4 text-slate-500">Diretor</td>
-              <td>{data.director}</td>
-            </tr>
-            <tr>
-              <td className="pr-4 text-slate-500">Duração</td>
-              <td>{data.runtime} min</td>
-            </tr>
-            <tr>
-              <td className="pr-4 text-slate-500">Lançamento</td>
-              <td>{new Date(data.release_date).toLocaleDateString()}</td>
-            </tr>
-            </tbody>
-          </table>
         </div>
       </div>
-
+    </div>
   );
-};
-
-export default Details;
+}

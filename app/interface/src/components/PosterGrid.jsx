@@ -1,13 +1,6 @@
 import React from "react";
 import MovieCard from "./MovieCard";
 
-/**
- * Galeria horizontal rolável de pôsteres.
- *
- * @param {Array}  items   [{title,poster, …}]
- * @param {Func}   onClick callback(item)
- * @param {String} className extra Tailwind classes
- */
 export default function PosterGrid({ items, onClick, className = '' }) {
   return (
     <div

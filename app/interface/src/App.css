@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+
 :root {
   --cinema-bg: #111;             /* parede escura */
   --screen-light: #e5e5e5;       /* luz sutil */
@@ -33,12 +35,12 @@ body {
 }
 
 h1 {
-  font-family: var(--font-display), serif;
+  font-family: 'Bebas Neue', serif;
   font-size: clamp(2rem, 8vw, 3rem);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--accent-red);
-  text-align: center;
+  margin-bottom: 1rem;
 }
 
 .react-select-container,
@@ -59,7 +61,7 @@ button {
   transition: background 200ms ease;
 }
 button:disabled {
-  background: #550;
+  background: #888;
   cursor: default;
 }
 button:not(:disabled):hover {

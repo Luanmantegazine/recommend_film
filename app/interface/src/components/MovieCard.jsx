@@ -1,21 +1,21 @@
 import React from "react";
 
-export default function MovieCard({ poster, onClick }) {
+export default function MovieCard({ title, poster, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="movie-card"               /* impede encolher/expandir */
-      style={{ width: 96 }}                  /* 96 px = 6rem (w-24) */
+      className="movie-card group flex-shrink-0 w-30 cursor-pointer"
+      title={title}
     >
       <img
-        src={poster}
-        style={{ width: 224, height: 256, objectFit: 'cover', borderRadius: 6 }}
+        src={poster || '/img/placeholder.jpg'}
+        alt={title}
+        className="
+          w-24 h-32 object-cover rounded
+          transition-transform duration-300 ease-out
+          group-hover:scale-110
+        "
       />
-      <div
-        className="text-center text-[10px] mt-1 truncate"
-        style={{ width: 224 }}
-      >
-      </div>
     </div>
   );
 }

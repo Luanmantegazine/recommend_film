@@ -1,0 +1,50 @@
+:root {
+  --cinema-bg: #111;
+  --accent-red: #e50914;
+  --poster-radius: 4px;
+  --poster-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --poster-shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.6);
+}
+
+.movie-card {
+  width: 6rem;
+  flex-shrink: 0;
+  cursor: pointer;
+  position: relative;
+}
+
+.movie-card img {
+  width: 100%;
+  height: 8rem;
+  object-fit: cover;
+  border-radius: var(--poster-radius);
+  box-shadow: var(--poster-shadow);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.movie-card:hover img,
+.movie-card:focus img {
+  transform: scale(1.08);
+  box-shadow: var(--poster-shadow-hover);
+}
+
+.movie-card:focus-visible img {
+  outline: 2px solid var(--accent-red);
+  outline-offset: 2px;
+}
+
+.movie-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  border-radius: 0 0 var(--poster-radius) var(--poster-radius);
+  background: linear-gradient(to top, rgba(0,0,0,0.65), transparent);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.movie-card:hover::after {
+  opacity: 1;
+}

@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { useMovies } from '@/hooks/useMovies';
 import { ArrowRight } from 'lucide-react';
 import { useRecommend } from '@/hooks/useRecommend';
-import { useDetails} from "@/hooks/useDetails";
-import InfoModal from "@/components/InfoModal";
-import PosterGrid from '@/components/PosterGrid';
+import PosterGrid from '@/components/PosterGrid/PosterGrid';
 import Select from 'react-select';
 
 export default function Home() {
@@ -17,10 +15,6 @@ export default function Home() {
     if (!title) return;
     refetch();
   };
-
-  const handlePoster = (m) => setQtd(m.movie_id);
-  const closeModal = () => setQtd(null);
-
    return (
        <div className="mx-auto w-full max-w-screen-sm px-4">
            <h1 className="text-center text-3xl sm:text‑4xl font-bold text-sky-700 mb-4">
@@ -38,7 +32,7 @@ export default function Home() {
                />
 
                <div className="flex gap-3 mb-3 text-slate-300">
-                   {[5, 10, 15].map(n => (
+                   {[5, 10, 15, 20, 25, 30, 35, 40].map(n => (
                        <label key={n} className="inline-flex items-center gap-1 cursor-pointer">
                            <input
                                type="radio"

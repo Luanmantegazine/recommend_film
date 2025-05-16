@@ -4,7 +4,7 @@ export default function MovieCard({ title, poster, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="movie-card group flex-shrink-0 w-30 cursor-pointer"
+      className="movie-card flex-shrink-0 w-24 cursor-pointer"
       title={title}
     >
       <img

@@ -2,18 +2,24 @@ import { useState } from 'react';
 import { useMovies } from '@/hooks/useMovies';
 import { ArrowRight } from 'lucide-react';
 import { useRecommend } from '@/hooks/useRecommend';
+import { useDetails} from "@/hooks/useDetails";
+import InfoModal from "@/components/InfoModal";
 import PosterGrid from '@/components/PosterGrid';
 import Select from 'react-select';
 
 export default function Home() {
   const [title, setTitle] = useState('');
+  const [qtd, setQtd] = useState(5)
   const { data: options = [] } = useMovies(0, 100, true);
-  const {data: recs, isFetching, refetch, isFetched,} = useRecommend(title, 5);
+  const {data: recs, isFetching, refetch, isFetched,} = useRecommend(title, qtd);
 
   const handleRecommend = () => {
     if (!title) return;
     refetch();
   };
+
+  const handlePoster = (m) => setQtd(m.movie_id);
+  const closeModal = () => setQtd(null);
 
    return (
        <div className="mx-auto w-full max-w-screen-sm px-4">
@@ -30,6 +36,22 @@ export default function Home() {
                    classNamePrefix="rs"
                    isSearchable
                />
+
+               <div className="flex gap-3 mb-3 text-slate-300">
+                   {[5, 10, 15].map(n => (
+                       <label key={n} className="inline-flex items-center gap-1 cursor-pointer">
+                           <input
+                               type="radio"
+                               name="qtd"
+                               value={n}
+                               checked={qtd === n}
+                               onChange={() => setQtd(n)}
+                               className="accent-sky-600"
+                           />
+                           {n}
+                       </label>
+                   ))}
+               </div>
 
                <button
                    onClick={handleRecommend}

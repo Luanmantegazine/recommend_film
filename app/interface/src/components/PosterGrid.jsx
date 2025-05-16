@@ -1,5 +1,7 @@
 import React from 'react';
+import InfoModal from './InfoModal'
 import MovieCard from './MovieCard';
+import { useDetails} from "@/hooks/useDetails";
 
 export default function PosterGrid({ items, onClick, className = '' }) {
   return (

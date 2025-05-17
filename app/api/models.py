@@ -8,7 +8,8 @@ class MovieCompact(BaseModel):
 
 class RecResp(BaseModel):
     title: str
-    poster: str
+    movie_id: int
+    poster: str | None = None
 
 
 class MovieDetail(BaseModel):

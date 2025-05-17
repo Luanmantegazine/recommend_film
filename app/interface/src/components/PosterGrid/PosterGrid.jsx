@@ -1,9 +1,14 @@
-import React from 'react';
+import React, {useState} from 'react';
+import InfoModal from "@/components/InfoModal/InfoModal";
 import MovieCard from '../MovieCard/MovieCard';
 import './PosterGrid.css'
+import {useDetails} from "@/hooks/useDetails";
 
 export default function PosterGrid({ items, onClick, className = '' }) {
-  const isGrid = items.length > 5; // threshold para grid
+  const isGrid = items.length > 5;
+  const [ selectedId, setSelecteId] = useState(null);
+  const {data: details, isFetching } = useDetails(selectedId, {enabled: !!selectedId,});
+  const closeModal = () => selectedId(null);
 
   return (
     <div
@@ -22,6 +27,11 @@ export default function PosterGrid({ items, onClick, className = '' }) {
           />
         </div>
       ))}
-    </div>
+        <InfoModal
+        isOpen={!!selectedId && !isFetching}
+        onClose={closeModal}
+        movie={details}
+      />
+    </>
   );
 }

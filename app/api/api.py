@@ -51,10 +51,14 @@ def recommend(
             raise HTTPException(status_code=404, detail="Filme não encontrado")
 
     recs = rec_engine.recommend(title, top_k=top_k)
-    return [RecResp(title=t, poster=p) for t, p in recs]
+    response = []
+    for t, p in recs:
+        rid = int(movies_raw.loc[movies_raw.title == t, 'movie_id'].iloc[0])
+        response.append({"movie_id": rid, "title": t, "poster": p})
+    return response
 
 
-@app.get("/details/{movie_id}", response_model=MovieDetail, tags=["Movie API"])
+@app.get("/details/movie_id", response_model=MovieDetail, tags=["Movie API"])
 def details(movie_id: int):
     try:
         base = movies_raw.loc[movies_raw.movie_id == movie_id].iloc[0]

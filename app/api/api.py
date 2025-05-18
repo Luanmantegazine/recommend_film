@@ -58,26 +58,21 @@ def recommend(
     return response
 
 
-@app.get("/details/movie_id", response_model=MovieDetail, tags=["Movie API"])
-def details(movie_id: int):
+@app.get("/details", response_model=MovieDetail, tags=["Movie API"])
+def details(movie_id: int, title: str | None = None):
     try:
         base = movies_raw.loc[movies_raw.movie_id == movie_id].iloc[0]
     except IndexError:
-        raise HTTPException(status_code=404, detail="Filme não encontrado")
+        raise HTTPException(404, "Filme não encontrado")
 
-    return JSONResponse(
-        {
-            "movie_id": int(movie_id),
-            "title": base.title,
-            "overview": base.overview,
-            "genres": base.genres,
-            "keywords": base.keywords,
-            "cast": base.top_cast,
-            "director": base.director,
-            "production_companies": base.prod_comp,
-
-        }
-    )
+    return {
+        "movie_id": int(movie_id),
+        "title": base.title,
+        "overview": base.overview,
+        "genres": base.genres,
+        "director": base.director,
+        "cast": base.top_cast
+    }
 
 
 if __name__ == '__main__':

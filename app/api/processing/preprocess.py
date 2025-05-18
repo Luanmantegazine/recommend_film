@@ -1,37 +1,54 @@
-import os
+"""
+Módulo de pré-processamento:
+- Lê os 2 CSVs originais do TMDB
+- Normaliza gêneros, keywords, companhias
+- Extrai top 10 atores (name + photo)
+- Gera tokens para vetorização
+- Constrói matriz TF e similaridade coseno
+"""
+
+from __future__ import annotations
+
 import json
+import os
 import string
 from functools import lru_cache
 from pathlib import Path
 from typing import List, Tuple
 
+import nltk
 import numpy as np
 import pandas as pd
 import requests
-import nltk
 from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+# ------------------------------------------------------------------- #
+# Config
+# ------------------------------------------------------------------- #
 TMDB_API_KEY = os.getenv("TMDB_API_KEY", "6177b4297dff132d300422e0343471fb")
 if not TMDB_API_KEY:
     raise RuntimeError("Defina a variável de ambiente TMDB_API_KEY")
 
-nltk.download('stopwords')
-POSTER_URL = "https://image.tmdb.org/t/p/w780/"
-PERSON_URL = "https://image.tmdb.org/t/p/w220_and_h330_face/"
-HTTP_TIMEOUT = (3.5, 10)  # connect, read
+nltk.download("stopwords")
 
-STEMMER = SnowballStemmer("english")
+POSTER_URL  = "https://image.tmdb.org/t/p/w780/"
+PERSON_URL  = "https://image.tmdb.org/t/p/w220_and_h330_face/"
+HTTP_TIMEOUT = (3.5, 10)           # connect, read
+
+STEMMER    = SnowballStemmer("english")
 STOP_WORDS = set(stopwords.words("english"))
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = ROOT_DIR / "Files"
+ROOT_DIR   = Path(__file__).resolve().parent.parent
+DATA_DIR   = ROOT_DIR / "Files"
 MOVIES_CSV = DATA_DIR / "tmdb_5000_movies.csv"
 CREDITS_CSV = DATA_DIR / "tmdb_5000_credits.csv"
 
-
+# ------------------------------------------------------------------- #
+# Helpers
+# ------------------------------------------------------------------- #
 def _safe_request(url: str) -> dict:
     try:
         resp = requests.get(url, timeout=HTTP_TIMEOUT)
@@ -43,16 +60,23 @@ def _safe_request(url: str) -> dict:
 
 def _normalize_tokens(tokens: List[str]) -> List[str]:
     punc_table = str.maketrans("", "", string.punctuation)
-    clean = []
-    for t in tokens:
-        t = t.lower().translate(punc_table)
-        root = STEMMER.stem(t)
+    out = []
+    for tok in tokens:
+        tok = tok.lower().translate(punc_table)
+        root = STEMMER.stem(tok)
         if len(root) > 2 and root not in STOP_WORDS:
-            clean.append(root)
-    return clean
+            out.append(root)
+    return out
 
-
+# ------------------------------------------------------------------- #
+# Leitura e preparação dos DataFrames
+# ------------------------------------------------------------------- #
 def read_csv_to_df() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Retorna:
+    movies_raw : dataframe completo para detalhes
+    movies_vec : dataframe reduzido + coluna tokens (para vetorização)
+    movies2    : extras numéricos (ex.: runtime, receita)  – não usado aqui
+    """
     movies = pd.read_csv(
         MOVIES_CSV,
         converters={
@@ -66,66 +90,95 @@ def read_csv_to_df() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         converters={"cast": json.loads, "crew": json.loads},
     )
 
+    # ------------------------------------------------------------ #
+    # Merge e limpeza inicial
+    # ------------------------------------------------------------ #
     movies = movies.merge(credits, on="title", how="inner")
     movies = movies.dropna(subset=["overview"])
 
+    # ------------------------------------------------------------ #
+    # Normalização de campos simples
+    # ------------------------------------------------------------ #
     movies["genres"] = movies["genres"].apply(lambda l: [g["name"] for g in l])
     movies["keywords"] = movies["keywords"].apply(lambda l: [k["name"] for k in l])
-    movies["top_cast"] = movies["cast"].apply(lambda l: [c["name"] for c in l[:10]])
-    movies["director"] = movies["crew"].apply(
-        lambda l: next((c["name"] for c in l if c.get("job") == "Director"), "")
-    )
     movies["prod_comp"] = movies["production_companies"].apply(
         lambda l: [c["name"] for c in l]
     )
 
+    # ------------------------------------------------------------ #
+    # Top 10 elenco:  nome + foto
+    # ------------------------------------------------------------ #
+    def _top_cast_with_photo(cast):
+        out = []
+        for c in cast[:10]:
+            out.append({
+                "name":  c["name"],
+                "photo": c.get("profile_path") or None
+            })
+        return out
+
+    movies["top_cast"] = movies["cast"].apply(_top_cast_with_photo)
+
+    # Apenas nomes para vetorização
+    movies["top_cast_names"] = movies["top_cast"].apply(lambda l: [c["name"] for c in l])
+
+    # Diretor (primeira ocorrência com job == Director)
+    movies["director"] = movies["crew"].apply(
+        lambda l: next((c["name"] for c in l if c.get("job") == "Director"), "")
+    )
+
+    # ------------------------------------------------------------ #
+    # TOKENS para modelo de recomendação
+    # ------------------------------------------------------------ #
     movies["tokens"] = (
-            movies["overview"].str.split()
-            + movies["genres"]
-            + movies["keywords"]
-            + movies["top_cast"]
-            + movies["prod_comp"]
+          movies["overview"].str.split()
+        + movies["genres"]
+        + movies["keywords"]
+        + movies["top_cast_names"]
+        + movies["prod_comp"]
     ).apply(_normalize_tokens)
 
-    new_df = movies[
-        ["movie_id", "title", "tokens", "genres", "keywords", "top_cast", "prod_comp"]
-    ].copy()
-    new_df["genres"] = new_df["genres"].str.join(" ").str.lower()
-    new_df["keywords"] = new_df["keywords"].apply(lambda l: " ".join(l))
-    new_df["tcast"] = new_df["top_cast"].apply(lambda l: " ".join(l).lower())
-    new_df["tproduction_comp"] = new_df["prod_comp"].apply(lambda l: " ".join(l).lower())
-    new_df["tags"] = new_df["tokens"].apply(lambda l: " ".join(l))
-
-    movies2 = movies[
+    # ------------------------------------------------------------ #
+    # DataFrame compactado para vetorização
+    # ------------------------------------------------------------ #
+    movies_vec = movies[
         [
             "movie_id",
             "title",
-            "budget",
-            "overview",
-            "popularity",
-            "release_date",
-            "revenue",
-            "runtime",
-            "spoken_languages",
-            "status",
-            "vote_average",
-            "vote_count",
+            "tokens",
+            "genres",
+            "keywords",
+            "top_cast_names",
+            "prod_comp",
         ]
     ].copy()
 
-    return movies, new_df, movies2
+    movies_vec["genres"] = movies_vec["genres"].str.join(" ").str.lower()
+    movies_vec["keywords"] = movies_vec["keywords"].apply(lambda l: " ".join(l))
+    movies_vec["tcast"] = movies_vec["top_cast_names"].apply(lambda l: " ".join(l).lower())
+    movies_vec["tproduction_comp"] = movies_vec["prod_comp"].apply(lambda l: " ".join(l).lower())
+    movies_vec["tags"] = movies_vec["tokens"].apply(lambda l: " ".join(l))
 
+    # extras (não usados no algoritmo de recomendação atual)
+    movies2 = movies[
+        [
+            "movie_id", "title", "budget", "overview", "popularity",
+            "release_date", "revenue", "runtime", "spoken_languages",
+            "status", "vote_average", "vote_count",
+        ]
+    ].copy()
 
+    return movies, movies_vec, movies2
+
+# ------------------------------------------------------------------- #
+# Classe de recomendação
+# ------------------------------------------------------------------- #
 class Recommender:
-    movies_raw: pd.DataFrame
-    movies_vec: pd.DataFrame
-    similarity: np.ndarray
-    cv: CountVectorizer
-
     def __init__(self) -> None:
         self.movies_raw, self.movies_vec, _ = read_csv_to_df()
         self._build_vectors()
 
+    # -------- vetorização + matriz de similaridade ------------------ #
     def _build_vectors(self) -> None:
         self.cv = CountVectorizer(
             max_features=5_000,
@@ -134,12 +187,11 @@ class Recommender:
             preprocessor=lambda x: x,
             token_pattern=None,
             lowercase=False,
-
         )
-
         mat = self.cv.fit_transform(self.movies_raw["tokens"])
         self.similarity = cosine_similarity(mat)
 
+    # -------- recomendação ------------------------------------------ #
     @lru_cache(maxsize=32)
     def recommend(self, title: str, top_k: int = 25) -> List[Tuple[str, str]]:
         if title not in self.movies_raw["title"].values:
@@ -156,6 +208,7 @@ class Recommender:
             recs.append((rec_title, poster))
         return recs
 
+    # -------- fetch poster / person --------------------------------- #
     @staticmethod
     @lru_cache(maxsize=4_096)
     def _fetch_poster(movie_id: int) -> str:

@@ -11,12 +11,15 @@ class RecResp(BaseModel):
     movie_id: int
     poster: str | None = None
 
+class Cast(BaseModel):
+    name: str
+    photo: str | None = None
+
 
 class MovieDetail(BaseModel):
     movie_id: int
     title: str
-    overview: str
-    genres: list[str]
-    cast: list[str]
-    director: str
-    production_companies: list[str]
+    overview: str | None
+    genres: list[str] | str
+    director: str | None
+    cast: list[Cast] = []

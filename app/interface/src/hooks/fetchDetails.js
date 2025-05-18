@@ -1,14 +1,20 @@
 import api from '../api.js';
 
-export async function getMovieDetails(movie_id) {
-  const { data } = await api.get(`/details/${movie_id}`);
+export async function getMovieDetails(sel) {
+  const { data } = await api.get('/details', { params: sel });
 
   return {
     id: data.movie_id,
     title: data.title,
     overview: data.overview,
     genres: Array.isArray(data.genres) ? data.genres : (data.genres || '').split('|'),
-    director: data.director ?? 'Desconhecido',
-    cast: data.cast ?? [],
+    director: data.director,
+    cast: data.cast.map(c => ({
+      name:  c.name,
+      photo: c.photo
+        ? `https://image.tmdb.org/t/p/w185${c.photo}`
+        : '/img/avatar-placeholder.png'
+    })),
+    poster: sel.poster
   };
 }

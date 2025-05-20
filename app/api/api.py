@@ -59,7 +59,7 @@ def recommend(
 
 
 @app.get("/details", response_model=MovieDetail, tags=["Movie API"])
-def details(movie_id: int, title: str | None = None):
+def details(movie_id: int):
     try:
         base = movies_raw.loc[movies_raw.movie_id == movie_id].iloc[0]
     except IndexError:

@@ -60,18 +60,22 @@ def recommend(
 
 @app.get("/details", response_model=MovieDetail, tags=["Movie API"])
 def details(movie_id: int):
-    try:
-        base = movies_raw.loc[movies_raw.movie_id == movie_id].iloc[0]
-    except IndexError:
-        raise HTTPException(404, "Filme não encontrado")
+    base = movies_raw.loc[movies_raw.movie_id == movie_id].iloc[0]
+
+    cast = []
+    for p in base.top_cast:
+        if p.get("photo") is None:
+            photo_url = Recommender.fetch_person_photo(p["id"])
+            p["photo"] = photo_url.replace("https://image.tmdb.org/t/p/w220_and_h330_face/", "") if photo_url else None
+        cast.append(p)
 
     return {
-        "movie_id": int(movie_id),
+        "movie_id": movie_id,
         "title": base.title,
         "overview": base.overview,
         "genres": base.genres,
         "director": base.director,
-        "cast": base.top_cast
+        "cast": cast,
     }
 
 

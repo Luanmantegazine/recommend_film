@@ -41,17 +41,16 @@ export default function InfoModal({ isOpen, onClose, movie, loading }) {
               <p className="info-modal__overview">{overview}</p>
 
               <div className="info-modal__meta">
-                <p><strong>Gêneros:</strong> {genres.join(', ')}</p>
-                <p><strong>Diretor:</strong> {director}</p>
+                <p><strong>Genre:</strong> {genres.join(', ')}</p>
+                <p><strong>Director:</strong> {director}</p>
               </div>
 
-              {/* —­­ ELENCO COM FOTOS —­­ */}
-              <h3 className="info-modal__subtitle">Elenco principal</h3>
+              <h3 className="info-modal__subtitle">Cast</h3>
               <ul className="cast-list">
                 {cast.slice(0, 8).map((p, i) => (
                   <li key={i} className="cast-item">
                     <img
-                      src={p.photo || '/img/avatar-placeholder.png'}
+                      src={p.photo}
                       alt={p.name}
                       className="cast-photo"
                       loading="lazy"

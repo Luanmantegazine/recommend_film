@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pydantic import BaseModel
 
 
@@ -9,9 +11,10 @@ class MovieCompact(BaseModel):
 class RecResp(BaseModel):
     title: str
     movie_id: int
-    poster: str | None = None
+    poster: str
 
 class Cast(BaseModel):
+    id: int
     name: str
     photo: str | None = None
 
@@ -19,7 +22,7 @@ class Cast(BaseModel):
 class MovieDetail(BaseModel):
     movie_id: int
     title: str
-    overview: str | None
-    genres: list[str] | str
-    director: str | None
+    overview: str
+    genres: list[str]
+    director: str
     cast: list[Cast] = []

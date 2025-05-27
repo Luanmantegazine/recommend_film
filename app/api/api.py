@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import uvicorn
-from models import MovieCompact, MovieDetail, RecResp
+from typing import Any, List
+from models import MovieBrief, MovieDetail, Cast, RecommendRequest
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import JSONResponse
-from app.api.processing.preprocess import Recommender, read_csv_to_df
-from fastapi.middleware.cors import CORSMiddleware
+from app.api.processing.preprocess import TMDBRecommender
 
+from fastapi.middleware.cors import CORSMiddleware
+from processing.client import ( discover_movies, movie_details, IMG_W185, IMG_W500, fetch_person_photo,
+                               search_movie, gett)
+
+rec_engine = TMDBRecommender(pages=20, year_from=2000)
 app = FastAPI(
     title="Movie Recommender API",
     openapi_prefix="/api"
@@ -19,64 +23,105 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-rec_engine = Recommender()
-movies_raw, _, movies2 = read_csv_to_df()
 
-
-@app.get("/movies", response_model=list[MovieCompact], tags=["Movie API"])
-def list_movies(
-        offset: int = Query(0, ge=0),
-        limit: int = Query(100, gt=0, le=500),
-        compact: bool = True,
+@app.get("/movies", response_model=List[MovieBrief])
+def get_movies(
+        page: int = Query(1, ge=1, description="Página de resultados"),
+        sort_by: str = Query("popularity.desc", description="Ordenação TMDB"),
+        vote_count_gte: int = Query(100, ge=0, description="Min. de votos"),
 ):
-    chunk = movies_raw.iloc[offset: offset + limit]
-    if compact:
-        return JSONResponse([{"movieId": int(m.movie_id), "movie": m.title} for m in chunk.itertuples()])
-    return JSONResponse(content=chunk.to_dict("records"))
-
-
-@app.get("/recommend", response_model=list[RecResp], tags=["Movie API"])
-def recommend(
-        title_id: int | None = None,
-        title: str | None = None,
-        top_k: int = Query(25, ge=1, le=50)
-):
-    if (title_id is None) == (title is None):
-        raise HTTPException(status_code=422, detail="Passe title_id ou title")
-
-    if title is None:
-        try:
-            title = movies_raw.loc[movies_raw.movie_id == title_id, "title"].iloc[0]
-        except IndexError:
-            raise HTTPException(status_code=404, detail="Filme não encontrado")
-
-    recs = rec_engine.recommend(title, top_k=top_k)
-    response = []
-    for t, p in recs:
-        rid = int(movies_raw.loc[movies_raw.title == t, 'movie_id'].iloc[0])
-        response.append({"movie_id": rid, "title": t, "poster": p})
-    return response
-
-
-@app.get("/details", response_model=MovieDetail, tags=["Movie API"])
-def details(movie_id: int):
-    base = movies_raw.loc[movies_raw.movie_id == movie_id].iloc[0]
-
-    cast = []
-    for p in base.top_cast:
-        if p.get("photo") is None:
-            photo_url = Recommender.fetch_person_photo(p["id"])
-            p["photo"] = photo_url.replace("https://image.tmdb.org/t/p/w220_and_h330_face/", "") if photo_url else None
-        cast.append(p)
-
-    return {
-        "movie_id": movie_id,
-        "title": base.title,
-        "overview": base.overview,
-        "genres": base.genres,
-        "director": base.director,
-        "cast": cast,
+    params = {
+        "sort_by": sort_by,
+        "vote_count.get": vote_count_gte,
+        "page": page,
     }
+
+    results = discover_movies(**params)
+    return [
+        MovieBrief(
+            id=m["id"],
+            title=m["title"],
+            poster=IMG_W500 + m["poster_path"] if m.get("poster_path") else None,
+            year=(m.get("release_date") or "")[:4] or None,
+            rating=m.get("vote_average")
+
+        )
+        for m in results
+    ]
+
+
+@app.post("/recommend", response_model=List[MovieBrief])
+def recommend(req: RecommendRequest):
+    rec_map: dict[str, dict] = {}
+    for liked in req.liked_movies:
+        try:
+            sims = rec_engine.recommend(liked)
+        except Exception:
+            continue
+        for rec_title, rec_poster in sims:
+            if rec_title not in rec_map:
+                rec_map[rec_title] = {"title": rec_title, "poster": rec_poster}
+
+    detailed: List[dict] = []
+    for rec in rec_map.values():
+        results = search_movie(rec["title"])
+        if not results:
+            continue
+        mid = results[0]["id"]
+        try:
+            data = gett(f"/movie/{mid}")
+            rating = data.get("vote_average", 0)
+            year = (data.get("release_date") or "")[:4] or None
+        except Exception:
+            rating, year = 0, None
+        detailed.append({
+            "id":     mid,
+            "title":  rec["title"],
+            "poster": rec["poster"],
+            "year":   year,
+            "rating": rating,
+        })
+
+    sorted_recs = sorted(
+        detailed,
+        key=lambda x: x.get("rating", 0),
+        reverse=True
+    )[: req.top_k]
+
+    # 4) Mapeia para MovieBrief e retorna
+    return [MovieBrief(**r) for r in sorted_recs]
+
+@app.get("/details/{movie_id}", response_model=MovieDetail)
+def details(movie_id: int):
+    try:
+        data = movie_details(movie_id, lang="en-US")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Erro TMDB: {e}")
+
+    cast_list: List[Cast] = []
+    for member in data.get("credits", {}).get("cast", [])[:10]:
+        pid = member.get("id")
+        name = member.get("name", "")
+        profile = member.get("profile_path")
+        if profile:
+            photo_url = IMG_W185 + profile
+        else:
+            photo_url = fetch_person_photo(pid) if pid else None
+
+        cast_list.append(Cast(id=pid, name=name, photo=photo_url))
+
+    crew = data.get("credits", {}).get("crew", [])
+    director = next((c["name"] for c in crew if c.get("job") == 'Director'), None)
+
+    return MovieDetail(
+        movie_id=movie_id,
+        title=data.get("title", ""),
+        overview=data.get("overview"),
+        genres=[g["name"] for g in data.get("genres", [])],
+        director=director,
+        cast=cast_list,
+        poster=IMG_W500 + data["poster_path"] if data.get("poster_path") else None,
+    )
 
 
 if __name__ == '__main__':

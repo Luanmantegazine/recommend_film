@@ -1,146 +1,116 @@
 
-from __future__ import annotations
 
-import json
 import os
 import string
 from functools import lru_cache
-from pathlib import Path
 from typing import List, Tuple
 
 import nltk
 import pandas as pd
-import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
+from requests.exceptions import ReadTimeout
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-TMDB_API_KEY = os.getenv("TMDB_API_KEY", "6177b4297dff132d300422e0343471fb")
-if not TMDB_API_KEY:
-    raise RuntimeError("Defina a variável de ambiente TMDB_API_KEY")
+from app.api.processing.client import movie_details
+
+TMDB_KEY = os.getenv("TMDB_API_KEY") or "6177b4297dff132d300422e0343471fb"
+if not TMDB_KEY:
+    raise RuntimeError("Defina TMDB_API_KEY no ambiente")
+
+# vamos permitir até 30s de leitura
+HTTP_TIMEOUT = (3.5, 30)
+POSTER_URL   = "https://image.tmdb.org/t/p/w780/"
 
 nltk.download("stopwords")
-
-POSTER_URL = "https://image.tmdb.org/t/p/w780/"
-IMAGE_BASE = "https://image.tmdb.org/t/p/w185"
-PERSON_URL = "https://image.tmdb.org/t/p/w220_and_h330_face/"
-HTTP_TIMEOUT = (3.5, 10)
-
-STEMMER = SnowballStemmer("english")
+STEMMER    = SnowballStemmer("english")
 STOP_WORDS = set(stopwords.words("english"))
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = ROOT_DIR / "Files"
-MOVIES_CSV = DATA_DIR / "tmdb_5000_movies.csv"
-CREDITS_CSV = DATA_DIR / "tmdb_5000_credits.csv"
-
-def _safe_request(url: str) -> dict:
-    try:
-        resp = requests.get(url, timeout=HTTP_TIMEOUT)
-        resp.raise_for_status()
-        return resp.json()
-    except requests.RequestException:
-        return {}
-
-
+# ---------------------------------------------------------------------- #
+# Helpers de texto
+# ---------------------------------------------------------------------- #
 def _normalize_tokens(tokens: List[str]) -> List[str]:
     punc_table = str.maketrans("", "", string.punctuation)
     out = []
     for tok in tokens:
-        tok = tok.lower().translate(punc_table)
-        root = STEMMER.stem(tok)
+        cleaned = tok.lower().translate(punc_table)
+        root    = STEMMER.stem(cleaned)
         if len(root) > 2 and root not in STOP_WORDS:
             out.append(root)
     return out
 
-def read_csv_to_df() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    movies = pd.read_csv(
-        MOVIES_CSV,
-        converters={
-            "genres": json.loads,
-            "keywords": json.loads,
-            "production_companies": json.loads,
-        },
-    )
-    credits = pd.read_csv(
-        CREDITS_CSV,
-        converters={"cast": json.loads, "crew": json.loads},
-    )
-    movies = movies.merge(credits, on="title", how="inner")
-    movies = movies.dropna(subset=["overview"])
+def build_dataframe_from_tmdb(
+    pages: int = 20,
+    year_from: int | None = None,
+    min_vote_count: int = 100,
+    max_workers: int = 10
+) -> pd.DataFrame:
 
-    movies["genres"] = movies["genres"].apply(lambda l: [g["name"] for g in l])
-    movies["keywords"] = movies["keywords"].apply(lambda l: [k["name"] for k in l])
-    movies["prod_comp"] = movies["production_companies"].apply(
-        lambda l: [c["name"] for c in l]
-    )
+    from app.api.processing.client import discover_movies
 
-    def _top_cast_with_photo(cast):
-        out = []
-        for c in cast[:10]:
-            out.append({
-                "id": c["id"],
-                "name":  c["name"],
-                "photo": c.get("profile_path") or None
-            })
-        return out
+    stub: List[dict] = []
+    for p in range(1, pages + 1):
+        params = {
+            "sort_by":        "popularity.desc",
+            "vote_count.gte": min_vote_count,
+            "page":           p,
+        }
+        if year_from:
+            params["primary_release_date.gte"] = f"{year_from}-01-01"
+        stub.extend(discover_movies(**params))
 
-    def _top_cast_basic(cast):
-        return [{"id": c["id"], "name": c["name"]} for c in cast[:10]]
+    ids = [m["id"] for m in stub]
+    records: List[dict] = []
 
-    movies["top_cast"] = movies["cast"].apply(_top_cast_basic)
-    movies["top_cast_names"] = movies["top_cast"].apply(lambda l: [p["name"] for p in l])
+    def _fetch_detail(mid: int) -> dict | None:
+        try:
+            det = movie_details(mid, lang="en-US")
+            return {
+                "movie_id": mid,
+                "title":    det.get("title", ""),
+                "overview": det.get("overview") or "",
+                "genres":   [g["name"] for g in det.get("genres", [])],
+                "keywords": [],  # opcional: chamar /keywords se quiser
+                "director": next(
+                    (c["name"] for c in det.get("credits", {}).get("crew", [])
+                     if c.get("job") == "Director"),
+                    ""
+                ),
+                "cast":     [c["name"] for c in det.get("credits", {}).get("cast", [])[:10]],
+                "poster":   POSTER_URL + det["poster_path"] if det.get("poster_path") else None
+            }
+        except ReadTimeout:
+            return None
+        except Exception:
+            return None
 
-    movies["director"] = movies["crew"].apply(
-        lambda l: next((c["name"] for c in l if c.get("job") == "Director"), "")
-    )
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = { pool.submit(_fetch_detail, mid): mid for mid in ids }
+        for fut in as_completed(futures):
+            res = fut.result()
+            if res:
+                records.append(res)
 
-    movies["tokens"] = (
-          movies["overview"].str.split()
-        + movies["genres"]
-        + movies["keywords"]
-        + movies["top_cast_names"]
-        + movies["prod_comp"]
-    ).apply(_normalize_tokens)
-
-    movies_vec = movies[
-        [
-            "movie_id",
-            "title",
-            "tokens",
-            "genres",
-            "keywords",
-            "top_cast_names",
-            "prod_comp",
-        ]
-    ].copy()
-
-    movies_vec["genres"] = movies_vec["genres"].str.join(" ").str.lower()
-    movies_vec["keywords"] = movies_vec["keywords"].apply(lambda l: " ".join(l))
-    movies_vec["tcast"] = movies_vec["top_cast_names"].apply(lambda l: " ".join(l).lower())
-    movies_vec["tproduction_comp"] = movies_vec["prod_comp"].apply(lambda l: " ".join(l).lower())
-    movies_vec["tags"] = movies_vec["tokens"].apply(lambda l: " ".join(l))
-
-    movies2 = movies[
-        [
-            "movie_id", "title", "budget", "overview", "popularity",
-            "release_date", "revenue", "runtime", "spoken_languages",
-            "status", "vote_average", "vote_count",
-        ]
-    ].copy()
-
-    return movies, movies_vec, movies2
-
-class Recommender:
-    def __init__(self) -> None:
-        self.movies_raw, self.movies_vec, _ = read_csv_to_df()
+    # 3) monta DataFrame e filtra
+    df = pd.DataFrame.from_records(records)
+    df.dropna(subset=["overview"], inplace=True)
+    return df
+class TMDBRecommender:
+    def __init__(self, pages: int = 20, year_from: int | None = None):
+        self.movies_raw = build_dataframe_from_tmdb(pages, year_from)
+        self.movies_raw["tokens"] = (
+              self.movies_raw["overview"].str.split()
+            + self.movies_raw["genres"]
+            + self.movies_raw["keywords"]
+            + self.movies_raw["cast"]
+        ).apply(_normalize_tokens)
         self._build_vectors()
 
     def _build_vectors(self) -> None:
         self.cv = CountVectorizer(
             max_features=5_000,
-            stop_words=None,
             tokenizer=lambda x: x,
             preprocessor=lambda x: x,
             token_pattern=None,
@@ -149,47 +119,22 @@ class Recommender:
         mat = self.cv.fit_transform(self.movies_raw["tokens"])
         self.similarity = cosine_similarity(mat)
 
-
     @lru_cache(maxsize=32)
     def recommend(self, title: str, top_k: int = 25) -> List[Tuple[str, str]]:
         if title not in self.movies_raw["title"].values:
             return []
-
         idx = self.movies_raw.index[self.movies_raw["title"] == title][0]
-        sims = list(enumerate(self.similarity[idx]))
-        sims_sorted = sorted(sims, key=lambda x: x[1], reverse=True)[1: top_k + 1]
-
-        recs = []
-        for i, _ in sims_sorted:
-            rec_title = self.movies_raw.iloc[i]["title"]
-            poster = self._fetch_poster(self.movies_raw.iloc[i]["movie_id"])
-            recs.append((rec_title, poster))
-        return recs
-
-    @staticmethod
-    @lru_cache(maxsize=4_096)
-    def _fetch_poster(movie_id: int) -> str:
-        url = (
-            f"https://api.themoviedb.org/3/movie/{movie_id}"
-            f"?api_key={TMDB_API_KEY}"
-        )
-        data = _safe_request(url)
-        path = data.get("poster_path")
-        return POSTER_URL + path if path else ""
-
-    @staticmethod
-    @lru_cache(maxsize=4096)
-    def fetch_person_photo(person_id: int) -> str | None:
-        url = (
-            f"https://api.themoviedb.org/3/person/{person_id}/images"
-            f"?api_key={TMDB_API_KEY}"
-        )
-        data = _safe_request(url)
-        profiles = data.get("profiles") or []
-        if profiles:
-            return IMAGE_BASE + profiles[0]["file_path"]
-        return None
+        sims = sorted(
+            enumerate(self.similarity[idx]),
+            key=lambda x: x[1],
+            reverse=True
+        )[1: top_k + 1]
+        return [
+            (self.movies_raw.iloc[i]["title"],
+             self.movies_raw.iloc[i]["poster"] or "")
+            for i, _ in sims
+        ]
 
 
 if __name__ == "__main__":
-    rec = Recommender()
+    rec = TMDBRecommender(pages=50, year_from=2020)

@@ -31,6 +31,7 @@ class MovieDetail(BaseModel):
     genres: list[str]
     director: str
     cast: list[Cast] = []
+    poster: str
 
 
 class RecommendRequest(BaseModel):

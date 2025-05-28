@@ -33,7 +33,7 @@ export default function MovieCard({ title, poster, onClick, movieId }) {
 }
 
 MovieCard.propTypes = {
-  movieId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]), // Adicionado propType para movieId
+  movieId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   title:   PropTypes.string.isRequired,
   poster:  PropTypes.string,
   onClick: PropTypes.func,

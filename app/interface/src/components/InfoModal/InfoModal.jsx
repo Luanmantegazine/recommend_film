@@ -9,7 +9,7 @@ export default function InfoModal({ isOpen, onClose, movie, loading }) {
     genres   = [],
     director = '',
     cast     = [],
-    poster = '',
+    poster
   } = movie || {};
 
    return (

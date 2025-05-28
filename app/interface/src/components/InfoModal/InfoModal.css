@@ -1,185 +1,243 @@
-/* InfoModal.css */
+/* InfoModal.css (Estilo Refinado) */
+
+/* As variáveis de cor (--color-background, --color-surface, --color-accent, etc.)
+   e fontes (--font-family-main, --font-family-title) devem vir do seu CSS global (ex: App.css ou index.css) */
+
 .info-modal-backdrop {
   position: fixed;
-  inset: 0; /* Equivalente a top, right, bottom, left = 0 */
-  background-color: rgba(0, 0, 0, 0.85); /* Backdrop mais escuro */
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.9); /* Backdrop um pouco mais opaco */
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem; /* Espaço para evitar que o modal toque as bordas da tela */
+  padding: 1rem;
   box-sizing: border-box;
-  animation: fadeInBackdrop var(--transition-speed) ease-out forwards;
+  animation: fadeInBackdrop var(--transition-speed, 0.2s) ease-out forwards;
 }
 
 .info-modal {
-  background-color: var(--color-surface);
-  color: var(--color-text-primary);
-  border-radius: var(--border-radius-medium);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+  /* MUDANÇA: Gradiente sutil para o fundo */
+  background-image: linear-gradient(to bottom, var(--color-surface, #202020), var(--color-background, #121212));
+  color: var(--color-text-primary, #E0E0E0);
+  border-radius: var(--border-radius-small, 4px); /* MUDANÇA: Bordas mais sharp */
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.7); /* Sombra um pouco mais pronunciada */
   width: 100%;
-  max-width: 800px; /* Largura máxima do modal */
-  max-height: 90vh; /* Altura máxima, para não ocupar a tela inteira */
+  max-width: var(--modal-max-width, 700px); /* Mantém o max-width ajustado anteriormente */
+  max-height: 88vh; /* Leve ajuste na altura máxima */
   display: flex;
-  flex-direction: column; /* Layout padrão mobile: poster em cima, conteúdo abaixo */
-  overflow: hidden; /* Para controlar o scroll do conteúdo */
-  animation: scaleInModal 0.3s var(--transition-speed) ease-out forwards;
+  flex-direction: column;
+  overflow: hidden;
+  animation: scaleInModal 0.3s var(--transition-speed, 0.2s) ease-out forwards;
   transform-origin: center center;
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Borda sutil para destacar o modal do backdrop */
 }
 
 .info-modal__close {
   position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  background: transparent;
+  top: 0.5rem; /* Mais próximo ao topo */
+  right: 0.5rem; /* Mais próximo à lateral */
+  background-color: transparent;
+  /* MUDANÇA: Adicionando um leve fundo no hover para o botão de fechar */
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
-  color: var(--color-text-secondary);
-  font-size: 1.8rem;
+  color: var(--color-text-secondary, #A0A0A0);
+  font-size: 1.6rem; /* Ajuste de tamanho */
   line-height: 1;
   cursor: pointer;
-  padding: 0.5rem;
   z-index: 10;
-  transition: color var(--transition-speed) ease;
+  transition: color var(--transition-speed, 0.2s) ease, background-color var(--transition-speed, 0.2s) ease, transform var(--transition-speed) ease;
 }
 
 .info-modal__close:hover,
 .info-modal__close:focus {
-  color: var(--color-accent);
+  color: var(--color-text-primary, #FFFFFF);
+  background-color: rgba(255, 255, 255, 0.1); /* Fundo sutil no hover */
+  transform: rotate(90deg); /* Efeito de rotação no hover */
   outline: none;
 }
 
 .info-modal__poster {
   width: 100%;
-  height: 300px; /* Altura fixa para o poster no layout mobile */
+  height: 280px; /* Altura ajustada para mobile */
   object-fit: cover;
-  object-position: center top; /* Prioriza o topo da imagem do poster */
-  background-color: var(--color-placeholder);
-  border-bottom: 2px solid var(--color-accent); /* Linha sutil de sotaque */
+  object-position: center top;
+  background-color: var(--color-placeholder, #2C2C2C);
+  /* Sem borda inferior no poster no modo mobile, o conteúdo terá padding */
 }
 
 .info-modal__content {
-  padding: 1.5rem;
-  overflow-y: auto; /* Scroll apenas para o conteúdo se necessário */
-  flex-grow: 1; /* Ocupa o espaço restante */
+  padding: var(--modal-spacing, 1.5rem);
+  overflow-y: auto;
+  flex-grow: 1;
 }
 
 .info-modal__title {
-  font-size: 2.2rem;
-  font-weight: 700;
+  font-size: 2rem;
+  font-weight: 700; /* Mantido forte */
   margin-top: 0;
   margin-bottom: 0.75rem;
-  line-height: 1.2;
+  line-height: 1.25;
   color: var(--color-text-primary);
+  letter-spacing: 0.5px; /* Espaçamento sutil */
 }
 
 .info-modal__overview {
-  font-size: 0.95rem;
-  line-height: 1.7;
+  font-size: 0.95rem; /* Tamanho bom para leitura */
+  line-height: 1.65;
   color: var(--color-text-secondary);
   margin-bottom: 1.5rem;
 }
 
 .info-modal__meta {
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   color: var(--color-text-secondary);
   margin-bottom: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08); /* Separador sutil acima do meta */
+  padding-top: 1rem;
 }
 
 .info-modal__meta p {
-  margin: 0.4rem 0;
+  margin: 0.35rem 0;
 }
 
 .info-modal__meta strong {
   color: var(--color-text-primary);
-  font-weight: 600;
+  font-weight: 500; /* Um pouco menos pesado que o título */
 }
 
-.info-modal__subtitle {
-  font-size: 1.4rem;
-  font-weight: 600;
+.info-modal__subtitle { /* Subtítulo "Elenco" */
+  font-size: 1.25rem;
+  font-weight: 500;
   color: var(--color-text-primary);
   margin-top: 1.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1rem; /* Aumentar um pouco a margem antes da lista */
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #333; /* Separador sutil */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Cast List Styling */
 .cast-list {
   list-style: none;
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
-  gap: 1rem;
+  /* MUDANÇA: Aumentar a largura mínima dos itens do elenco no mobile */
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Era ~70px */
+  gap: 1.25rem; /* MUDANÇA: Aumentar o espaçamento */
 }
 
 .cast-item {
   text-align: center;
+  transition: transform var(--transition-speed, 0.2s) ease;
+}
+
+.cast-item:hover {
+  transform: scale(1.05);
 }
 
 .cast-photo {
-  width: 65px;
-  height: 65px;
+  /* MUDANÇA: A foto pode ser um pouco maior para acompanhar o item mais largo */
+  width: 70px;  /* Era ~65px */
+  height: 70px; /* Era ~65px */
   border-radius: 50%;
   object-fit: cover;
-  margin-bottom: 0.5rem;
-  background-color: var(--color-placeholder);
-  border: 2px solid transparent; /* Borda inicial transparente */
-  transition: border-color var(--transition-speed) ease;
-}
-
-.cast-item:hover .cast-photo {
-  border-color: var(--color-accent);
+  margin: 0 auto 0.6rem auto; /* Centraliza a foto e adiciona margem inferior */
+  background-color: var(--color-placeholder, #2C2C2C);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
 .cast-name {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.85rem; /* MUDANÇA: Nome um pouco maior */
   color: var(--color-text-secondary);
   line-height: 1.3;
+  font-weight: 500;
+}
+
+
+/* Layout para telas maiores (Tablet e Desktop) */
+@media (min-width: 768px) {
+  /* ... (outros estilos do .info-modal, .info-modal__poster, .info-modal__content) ... */
+
+  .info-modal__subtitle {
+    margin-bottom: 1.25rem; /* Ajuste de margem para desktop */
+  }
+
+  .cast-list {
+    /* MUDANÇA: Aumentar significativamente a largura mínima no desktop */
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); /* Era ~80px ou 85px */
+    gap: 1.5rem; /* MUDANÇA: Espaçamento maior no desktop */
+  }
+
+  .cast-photo {
+    /* MUDANÇA: Fotos maiores no desktop */
+    width: 80px; /* Era ~75px */
+    height: 80px;
+  }
+
+  .cast-name {
+    font-size: 0.9rem; /* MUDANÇA: Nome um pouco maior no desktop */
+  }
 }
 
 /* Layout para telas maiores (Tablet e Desktop) */
 @media (min-width: 768px) {
   .info-modal {
-    flex-direction: row; /* Poster à esquerda, conteúdo à direita */
-    max-height: 85vh; /* Um pouco menos de altura em telas maiores */
+    flex-direction: row;
   }
 
   .info-modal__poster {
-    flex: 0 0 300px; /* Largura fixa para o poster */
-    height: auto; /* Altura se ajusta à proporção do poster */
-    object-fit: cover; /* Para manter proporção caso a altura seja limitada */
-    border-bottom: none; /* Remove a borda de baixo */
-    border-right: 2px solid var(--color-accent); /* Borda na lateral */
+    flex-shrink: 0;
+    flex-grow: 0;
+    width: var(--modal-poster-width-desktop, 220px); /* Use uma variável para facilitar o ajuste */
+    height: 100%; /* Ocupa a altura total do modal */
+    object-fit: cover;
+    border-top-left-radius: var(--border-radius-small, 4px); /* Consistente com o modal */
+    border-bottom-left-radius: var(--border-radius-small, 4px);
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    /* border-right: 1px solid rgba(255, 255, 255, 0.1); /* Linha divisória opcional */
   }
 
   .info-modal__content {
-    padding: 2rem; /* Mais padding */
+    flex-grow: 1;
+    width: auto; /* Deixa o flex-grow controlar */
+    padding: 1.75rem 2rem; /* Ajuste de padding */
   }
 
   .info-modal__title {
-    font-size: 2.5rem;
+    font-size: 2.5rem; /* Maior no desktop */
+  }
+
+  .info-modal__overview {
+    font-size: 1rem;
   }
 
   .cast-list {
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 1.25rem;
   }
 
   .cast-photo {
-    width: 80px;
-    height: 80px;
+    width: 75px;
+    height: 75px;
   }
 }
 
-/* Animações */
+/* Animações (mantidas como estavam ou podem ser sutilmente ajustadas) */
 @keyframes fadeInBackdrop {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
 @keyframes scaleInModal {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: scale(0.97) translateY(10px); } /* MUDANÇA: Animação mais sutil */
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }

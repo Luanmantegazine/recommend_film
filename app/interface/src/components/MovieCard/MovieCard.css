@@ -1,50 +1,55 @@
-:root {
-  --cinema-bg: #111;
-  --accent-red: #e50914;
-  --poster-radius: 4px;
-  --poster-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --poster-shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.6);
+/* MovieCard.css */
+.movie-card {
+  background-color: var(--color-placeholder); /* Fundo enquanto a imagem carrega */
+  border-radius: var(--border-radius-medium);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform var(--transition-speed) ease-in-out,
+              box-shadow var(--transition-speed) ease-in-out;
+  aspect-ratio: 2 / 3; /* Proporção comum de poster de filme */
+  display: flex; /* Para a imagem preencher corretamente */
+  position: relative; /* Para futuros overlays de título */
+  outline: none; /* Remover outline padrão, vamos customizar o foco */
 }
 
-.movie-card {
-  width: 6rem;
-  flex-shrink: 0;
-  cursor: pointer;
-  position: relative;
+.movie-card:hover,
+.movie-card:focus-visible { /* :focus-visible para melhor acessibilidade do foco */
+  transform: scale(1.06);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+  z-index: 10; /* Trazer para frente no hover/focus */
+}
+
+.movie-card:focus-visible {
+  outline: 3px solid var(--color-outline-focus);
+  outline-offset: 2px;
 }
 
 .movie-card img {
   width: 100%;
-  height: 8rem;
-  object-fit: cover;
-  border-radius: var(--poster-radius);
-  box-shadow: var(--poster-shadow);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  height: 100%;
+  object-fit: cover; /* Garante que a imagem cubra o card, pode cortar um pouco */
+  display: block;   /* Remove espaço extra abaixo da imagem */
+  border-radius: var(--border-radius-medium); /* Caso a imagem não preencha 100% */
 }
 
-.movie-card:hover img,
-.movie-card:focus img {
-  transform: scale(1.08);
-  box-shadow: var(--poster-shadow-hover);
-}
-
-.movie-card:focus-visible img {
-  outline: 2px solid var(--accent-red);
-  outline-offset: 2px;
-}
-
-.movie-card::after {
-  content: '';
+.movie-card .movie-title {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 40%;
-  border-radius: 0 0 var(--poster-radius) var(--poster-radius);
-  background: linear-gradient(to top, rgba(0,0,0,0.65), transparent);
+  padding: 1.5rem 1rem 1rem;
+  background: linear-gradient(to top, rgba(0,0,0,0.9) 20%, rgba(0,0,0,0) 100%);
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
   opacity: 0;
-  transition: opacity 0.25s ease;
+  transform: translateY(20px);
+  transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease;
 }
-.movie-card:hover::after {
+
+.movie-card:hover .movie-title,
+.movie-card:focus-visible .movie-title {
   opacity: 1;
+  transform: translateY(0);
 }

@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import uvicorn
 from typing import Any, List
-from models import MovieBrief, MovieDetail, Cast, RecommendRequest
+from models import MovieBrief, MovieDetail, Cast, QuizAnswer, RecResp
 from fastapi import FastAPI, HTTPException, Query
 from app.api.processing.preprocess import TMDBRecommender
 
 from fastapi.middleware.cors import CORSMiddleware
-from processing.client import ( discover_movies, movie_details, IMG_W185, IMG_W500, fetch_person_photo,
+from processing.client import (discover_movies, movie_details, IMG_W185, IMG_W500, fetch_person_photo,
                                search_movie, gett)
 
 rec_engine = TMDBRecommender(pages=20, year_from=2000)
@@ -32,7 +32,7 @@ def get_movies(
 ):
     params = {
         "sort_by": sort_by,
-        "vote_count.get": vote_count_gte,
+        "vote_count.gte": vote_count_gte,
         "page": page,
     }
 
@@ -49,47 +49,6 @@ def get_movies(
         for m in results
     ]
 
-
-@app.post("/recommend", response_model=List[MovieBrief])
-def recommend(req: RecommendRequest):
-    rec_map: dict[str, dict] = {}
-    for liked in req.liked_movies:
-        try:
-            sims = rec_engine.recommend(liked)
-        except Exception:
-            continue
-        for rec_title, rec_poster in sims:
-            if rec_title not in rec_map:
-                rec_map[rec_title] = {"title": rec_title, "poster": rec_poster}
-
-    detailed: List[dict] = []
-    for rec in rec_map.values():
-        results = search_movie(rec["title"])
-        if not results:
-            continue
-        mid = results[0]["id"]
-        try:
-            data = gett(f"/movie/{mid}")
-            rating = data.get("vote_average", 0)
-            year = (data.get("release_date") or "")[:4] or None
-        except Exception:
-            rating, year = 0, None
-        detailed.append({
-            "id":     mid,
-            "title":  rec["title"],
-            "poster": rec["poster"],
-            "year":   year,
-            "rating": rating,
-        })
-
-    sorted_recs = sorted(
-        detailed,
-        key=lambda x: x.get("rating", 0),
-        reverse=True
-    )[: req.top_k]
-
-    # 4) Mapeia para MovieBrief e retorna
-    return [MovieBrief(**r) for r in sorted_recs]
 
 @app.get("/details/{movie_id}", response_model=MovieDetail)
 def details(movie_id: int):
@@ -122,6 +81,26 @@ def details(movie_id: int):
         cast=cast_list,
         poster=IMG_W500 + data["poster_path"] if data.get("poster_path") else None,
     )
+
+
+@app.get("/search", response_model=List[MovieBrief])
+def search(q: str):
+    results = search_movie(q)[:10]
+    return [
+        MovieBrief(
+            id=m["id"],
+            title=m["title"],
+            poster=IMG_W500 + m["poster_path"] if m.get("poster_path") else None,
+        )
+        for m in results
+    ]
+
+
+@app.get("/recommend/{title}", response_model=List[RecResp])
+async def get_content_recommendations(title: str, top_k: int = Query(45, ge=1, le=50)):
+    recommendations = rec_engine.recommend(title=title, top_k=top_k)
+
+    return recommendations
 
 
 if __name__ == '__main__':

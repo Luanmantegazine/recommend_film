@@ -1,9 +1,7 @@
-
-
 import os
 import string
 from functools import lru_cache
-from typing import List, Tuple
+from typing import List, Tuple, Any, Dict
 
 import nltk
 import pandas as pd
@@ -20,42 +18,39 @@ TMDB_KEY = os.getenv("TMDB_API_KEY") or "6177b4297dff132d300422e0343471fb"
 if not TMDB_KEY:
     raise RuntimeError("Defina TMDB_API_KEY no ambiente")
 
-# vamos permitir até 30s de leitura
 HTTP_TIMEOUT = (3.5, 30)
-POSTER_URL   = "https://image.tmdb.org/t/p/w780/"
+POSTER_URL = "https://image.tmdb.org/t/p/w780/"
 
 nltk.download("stopwords")
-STEMMER    = SnowballStemmer("english")
+STEMMER = SnowballStemmer("english")
 STOP_WORDS = set(stopwords.words("english"))
 
-# ---------------------------------------------------------------------- #
-# Helpers de texto
-# ---------------------------------------------------------------------- #
+
 def _normalize_tokens(tokens: List[str]) -> List[str]:
     punc_table = str.maketrans("", "", string.punctuation)
     out = []
     for tok in tokens:
         cleaned = tok.lower().translate(punc_table)
-        root    = STEMMER.stem(cleaned)
+        root = STEMMER.stem(cleaned)
         if len(root) > 2 and root not in STOP_WORDS:
             out.append(root)
     return out
 
-def build_dataframe_from_tmdb(
-    pages: int = 20,
-    year_from: int | None = None,
-    min_vote_count: int = 100,
-    max_workers: int = 10
-) -> pd.DataFrame:
 
+def build_dataframe_from_tmdb(
+        pages: int = 20,
+        year_from: int | None = None,
+        min_vote_count: int = 100,
+        max_workers: int = 10
+) -> pd.DataFrame:
     from app.api.processing.client import discover_movies
 
     stub: List[dict] = []
     for p in range(1, pages + 1):
         params = {
-            "sort_by":        "popularity.desc",
+            "sort_by": "popularity.desc",
             "vote_count.gte": min_vote_count,
-            "page":           p,
+            "page": p,
         }
         if year_from:
             params["primary_release_date.gte"] = f"{year_from}-01-01"
@@ -69,17 +64,17 @@ def build_dataframe_from_tmdb(
             det = movie_details(mid, lang="en-US")
             return {
                 "movie_id": mid,
-                "title":    det.get("title", ""),
+                "title": det.get("title", ""),
                 "overview": det.get("overview") or "",
-                "genres":   [g["name"] for g in det.get("genres", [])],
-                "keywords": [],  # opcional: chamar /keywords se quiser
+                "genres": [g["name"] for g in det.get("genres", [])],
+                "keywords": [kw["name"] for kw in det.get("keywords", {}).get("keywords", [])],
                 "director": next(
                     (c["name"] for c in det.get("credits", {}).get("crew", [])
                      if c.get("job") == "Director"),
                     ""
                 ),
-                "cast":     [c["name"] for c in det.get("credits", {}).get("cast", [])[:10]],
-                "poster":   POSTER_URL + det["poster_path"] if det.get("poster_path") else None
+                "cast": [c["name"] for c in det.get("credits", {}).get("cast", [])[:10]],
+                "poster": POSTER_URL + det["poster_path"] if det.get("poster_path") else None
             }
         except ReadTimeout:
             return None
@@ -87,26 +82,28 @@ def build_dataframe_from_tmdb(
             return None
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        futures = { pool.submit(_fetch_detail, mid): mid for mid in ids }
+        futures = {pool.submit(_fetch_detail, mid): mid for mid in ids}
         for fut in as_completed(futures):
             res = fut.result()
             if res:
                 records.append(res)
 
-    # 3) monta DataFrame e filtra
     df = pd.DataFrame.from_records(records)
     df.dropna(subset=["overview"], inplace=True)
     return df
+
+
 class TMDBRecommender:
     def __init__(self, pages: int = 20, year_from: int | None = None):
         self.movies_raw = build_dataframe_from_tmdb(pages, year_from)
         self.movies_raw["tokens"] = (
-              self.movies_raw["overview"].str.split()
-            + self.movies_raw["genres"]
-            + self.movies_raw["keywords"]
-            + self.movies_raw["cast"]
+                self.movies_raw["overview"].str.split()
+                + self.movies_raw["genres"]
+                + self.movies_raw["keywords"]
+                + self.movies_raw["cast"]
         ).apply(_normalize_tokens)
         self._build_vectors()
+        self.title_to_indices = self.movies_raw.reset_index().groupby('title')['index'].apply(list).to_dict()
 
     def _build_vectors(self) -> None:
         self.cv = CountVectorizer(
@@ -119,21 +116,30 @@ class TMDBRecommender:
         mat = self.cv.fit_transform(self.movies_raw["tokens"])
         self.similarity = cosine_similarity(mat)
 
+        pass
+
     @lru_cache(maxsize=32)
-    def recommend(self, title: str, top_k: int = 25) -> List[Tuple[str, str]]:
-        if title not in self.movies_raw["title"].values:
+    def recommend(self, title: str, top_k: int = 25) -> list[Any] | list[dict[str, int | None | Any]]:
+        matching_indices = self.movies_raw.index[self.movies_raw["title"] == title]
+        if matching_indices.empty:
             return []
-        idx = self.movies_raw.index[self.movies_raw["title"] == title][0]
+        idx = matching_indices[0]
+
         sims = sorted(
             enumerate(self.similarity[idx]),
             key=lambda x: x[1],
             reverse=True
         )[1: top_k + 1]
-        return [
-            (self.movies_raw.iloc[i]["title"],
-             self.movies_raw.iloc[i]["poster"] or "")
-            for i, _ in sims
-        ]
+
+        recommended_movies = []
+        for i, _score in sims:
+            movie_data = self.movies_raw.iloc[i]
+            recommended_movies.append({
+                "title": movie_data["title"],
+                "movie_id": int(movie_data["movie_id"]) if pd.notna(movie_data["movie_id"]) else None,
+                "poster": movie_data["poster"] or None
+            })
+        return recommended_movies
 
 
 if __name__ == "__main__":

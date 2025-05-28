@@ -1,14 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '../api.js';
 
-export function useMovies(offset = 0, limit = 50, compact = true) {
+export function useMovies(
+  page = 1,
+  sortBy = 'popularity.desc',
+  voteCountGte = 100
+) {
   return useQuery({
-    queryKey: ['movies', offset, limit, compact],
+    queryKey: ['movies', page, sortBy, voteCountGte],
     queryFn: () => api
-      .get('/movies', { params: { offset, limit, compact } })
+      .get('/movies', {
+        params: {
+          page,
+          sort_by:       sortBy,
+          vote_count_gte: voteCountGte
+        }
+      })
       .then(r => r.data),
     keepPreviousData: true,
     staleTime: 1000 * 60 * 5,
   });
 }
+
 

@@ -14,8 +14,8 @@ class MovieBrief(BaseModel):
 
 class RecResp(BaseModel):
     title: str
-    movie_id: int
-    poster: str
+    movie_id: Optional[int] = None
+    poster: Optional[str] = None
 
 
 class Cast(BaseModel):
@@ -40,4 +40,11 @@ class RecommendRequest(BaseModel):
     class Config:
         allow_population_by_field_name = True
         allow_population_by_alias = True
+
+class QuizAnswer(BaseModel):
+    genre_id:       int
+    favorite_movie: Optional[str] = None
+    mood:           Optional[str] = None
+    themes:         list[str] = []
+    top_k:          int = 10
 

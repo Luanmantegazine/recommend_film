@@ -1,56 +1,49 @@
-:root {
-  --cinema-bg: #111;
-  --accent-red: #e50914;
-  --poster-gap: 0.75rem;
-  --poster-width: 6rem;
-  --poster-height: 8rem;
-  --scrollbar-height: 6px;
-  --scrollbar-thumb: var(--accent-red);
-}
-
+/* PosterGrid.css */
 .poster-grid {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: var(--poster-gap);
-  overflow-x: auto;
-  padding: var(--poster-gap) 0;
-  background: var(--cinema-bg);
-  scroll-snap-type: x mandatory;
+  display: grid;
+  gap: 1.5rem; /* Espaçamento entre os cards */
+  padding: 1.5rem; /* Espaçamento ao redor do grid */
 }
 
-.poster-item {
-  flex: 0 0 auto;
-  width: var(--poster-width);
-  scroll-snap-align: start;
+/* Layout padrão em colunas responsivas */
+.poster-grid.columns {
+  /* Ajuste minmax(160px, 1fr) para o tamanho mínimo/máximo desejado dos cards */
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
 }
 
-@media (min-width: 768px) {
+/* Ajustes para telas maiores - o auto-fill já ajuda, mas pode refinar */
+@media (min-width: 768px) { /* Tablets e acima */
   .poster-grid.columns {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(var(--poster-width), 1fr));
-    gap: var(--poster-gap);
-    overflow: visible;
-    scroll-snap-type: none;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.75rem;
+    padding: 1.75rem;
   }
 }
 
-/* Horizontal scrollbar styling */
-.poster-grid::-webkit-scrollbar {
-  height: var(--scrollbar-height);
-}
-.poster-grid::-webkit-scrollbar-track {
-  background: transparent;
-}
-.poster-grid::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar-thumb);
-  border-radius: 3px;
+@media (min-width: 1024px) { /* Desktops */
+  .poster-grid.columns {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 2rem;
+    padding: 2rem;
+  }
 }
 
-.poster-grid {
-  scrollbar-color: var(--scrollbar-thumb) transparent;
-  scrollbar-width: thin;
+/* Estilo para quando não está em modo 'columns' (ex: lista horizontal) */
+.poster-grid:not(.columns) {
+  display: flex;
+  overflow-x: auto; /* Habilita scroll horizontal */
+  padding: 1.5rem; /* Espaçamento */
+  gap: 1rem; /* Espaçamento entre itens na lista horizontal */
+  scroll-snap-type: x mandatory; /* Efeito de "snap" ao scrollar (opcional) */
 }
 
-.poster-grid {
-  scroll-behavior: smooth;
+.poster-grid:not(.columns)::-webkit-scrollbar {
+  height: 8px; /* Barra de rolagem mais fina para listas horizontais */
+}
+
+
+.poster-grid:not(.columns) .poster-item {
+  flex: 0 0 auto; /* Não encolhe/estica */
+  width: 150px; /* Largura fixa para itens na lista horizontal */
+  scroll-snap-align: start; /* Alinha com o início ao "snap" (opcional) */
 }

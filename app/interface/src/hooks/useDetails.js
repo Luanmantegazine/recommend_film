@@ -1,13 +1,13 @@
-import { useQuery }        from '@tanstack/react-query';
-import { getMovieDetails } from './fetchDetails';
+import { useQuery } from '@tanstack/react-query'
+import api           from '../api.js'
 
-export function useDetails(selected) {
-  const enabled = Boolean(selected?.movie_id);
-
+export function useDetails(movieId) {
   return useQuery({
-    queryKey: ['details', selected?.movie_id],
-    enabled,
-    queryFn: () => getMovieDetails(selected),
-    staleTime: 60 * 60 * 1000
+    queryKey: ['details', movieId],
+    enabled:  Boolean(movieId),
+    queryFn:  () => api
+      .get(`/details/${movieId}`)
+      .then(res => res.data),
+    staleTime: 60 * 60 * 1000, // 1h
   })
 }

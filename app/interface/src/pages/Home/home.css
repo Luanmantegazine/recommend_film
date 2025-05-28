@@ -1,132 +1,39 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* home.css */
+
+.home {
+  min-height: 100vh; /* Garante que a área principal ocupe pelo menos a altura da viewport */
+
+  /* A cor de fundo agora é herdada do 'body' (que deve usar var(--color-background)
+    do seu tema escuro global).
+    As classes Tailwind ('w-full max-w-7xl mx-auto p-4 sm:p-6') no home.jsx
+    já cuidam da largura, centralização e padding do container .home.
+  */
+
+  /* Estas propriedades flex centralizarão os filhos diretos do .home
+    (como o H1 e o componente PosterGrid) horizontalmente dentro do container.
+  */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centraliza o conteúdo (H1, PosterGrid) horizontalmente */
+
+  /* Se você precisar de um padding específico que não seja coberto pelo Tailwind,
+     você pode adicionar aqui, mas geralmente é bom manter o espaçamento consistente
+     com o sistema de design do Tailwind.
+     Ex: padding-top: 2rem; (além do padding já aplicado pelo Tailwind, se necessário)
+  */
 }
 
-body {
-  background-color: #0b0b0f;
-  color: #e0e0e0;
-  font-family: 'Roboto', sans-serif;
-  line-height: 1.5;
-  overflow-x: hidden;
-}
+/* As definições de estilo para .movie-grid foram removidas deste arquivo.
+  O componente PosterGrid e seu arquivo PosterGrid.css são agora responsáveis
+  pelo layout da grade de cartazes de filmes.
+*/
 
-.home-container {
-  padding: 3rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
+/* Você pode adicionar aqui quaisquer outros estilos específicos para a página Home
+  que não sejam cobertos pelo Tailwind ou pelos arquivos CSS dos componentes filhos.
+  Por exemplo, se o H1 nesta página precisasse de um estilo único:
 
-
-.home-title {
-  font-size: 2.5rem;
-  text-align: center;
-  margin-bottom: 1.5rem;
-  letter-spacing: 0.5rem;
-  text-transform: uppercase;
-  color: #e50914;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-}
-
-/* Grid dos filmes */
-.movie-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 3rem;
-}
-
-.movie-card {
-  position: relative;
-  cursor: pointer;
-  border-radius: 1rem;
-  overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-.movie-card:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.7);
-}
-
-.movie-card img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 2/3;
-  object-fit: cover;
-}
-
-.movie-card .title {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  background: linear-gradient(transparent, rgba(0,0,0,0.8));
-  padding: 0.5rem;
-  font-size: 0.9rem;
-  text-align: center;
-  color: #fff;
-}
-
-.movie-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.8);
-  z-index: 100;
-}
-.movie-modal-content {
-  background-color: #1c1c23;
-  border-top: 4px solid #e50914;
-  border-radius: 0.75rem;
-  max-width: 90%;
-  max-height: 90%;
-  overflow-y: auto;
-  padding: 2rem;
-  position: relative;
-}
-
-.close-button {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: #e0e0e0;
-  cursor: pointer;
-}
-
-.movie-details {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 1.5rem;
-}
-.movie-details img {
-  width: 100%;
-  border-radius: 0.5rem;
-}
-.movie-details .info {
-  color: #f1f1f1;
-}
-.movie-details .info h2 {
-  margin-bottom: 1rem;
-  color: #e50914;
-}
-.movie-details .info p {
-  margin-bottom: 0.75rem;
-}
-
-.footer {
-  margin-top: 3rem;
-  text-align: center;
-  padding: 1rem 0;
-  font-size: 0.85rem;
-  background: #15151a;
-  color: #777;
-  border-top: 1px solid #333;
-}
+  .home > h1 {
+    color: var(--color-accent); // Exemplo: Usar a cor de destaque para o título principal
+    // Outros estilos específicos...
+  }
+*/

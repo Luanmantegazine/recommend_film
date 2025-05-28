@@ -1,15 +1,14 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-
 import './MovieCard.css';
 
-export default function MovieCard({ title, poster, onClick }) {
+export default function MovieCard({ title, poster, onClick, movieId }) {
   const placeholder = '/img/placeholder.jpg';
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      onClick?.();
+      onClick?.(movieId);
     }
   };
 
@@ -18,28 +17,24 @@ export default function MovieCard({ title, poster, onClick }) {
       className="movie-card"
       role="button"
       tabIndex={0}
-      onClick={onClick}
+      onClick={() => onClick?.(movieId)}
       onKeyDown={handleKeyDown}
+      aria-label={`Ver detalhes de ${title}`}
       title={title}
     >
       <img
         src={poster || placeholder}
-        alt={`Poster of ${title}`}
+        alt={`Poster de ${title}`}
         loading="lazy"
         draggable="false"
       />
-      {/*
-        • Se no futuro quiser texto sobre o gradiente:
-        <span className="movie-title">{title}</span>
-      */}
     </div>
   );
 }
 
 MovieCard.propTypes = {
-  title:    PropTypes.string.isRequired,
-  poster:   PropTypes.string,
-  onClick:  PropTypes.func,
+  movieId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]), // Adicionado propType para movieId
+  title:   PropTypes.string.isRequired,
+  poster:  PropTypes.string,
+  onClick: PropTypes.func,
 };
-
-

@@ -1,108 +1,44 @@
-import React, { useState }   from 'react';
-import { useMovies }         from '@/hooks/useMovies';
-import { useRecommend }      from '@/hooks/useRecommend';
-import { useDetails }        from '@/hooks/useDetails';
-import InfoModal             from '@/components/InfoModal/InfoModal';
-import Select                from 'react-select';
-import './home.css';
+import React from 'react'; // useState e useEffect não são mais necessários aqui
+import MovieCard from '@/components/MovieCard/MovieCard'; // Mantido caso queira um fallback simples, mas PosterGrid é o principal
+import PosterGrid from '@/components/PosterGrid/PosterGrid'; // Usaremos para exibir os filmes
+import { useMovies } from '@/hooks/useMovies'; // Hook para buscar filmes
+import './home.css'; // Mantendo o CSS, pode conter estilos gerais para a página
 
 export default function Home() {
-  const [title, setTitle]         = useState('');
-  const [qtd, setQtd]             = useState(5);
-  const [selected, setSelected]   = useState(null); // { movie_id, title, poster }
-  const [modalOpen, setModalOpen] = useState(false);
+  // Buscar filmes populares (página 1, ordenado por popularidade)
+  const {
+    data: movies, // 'data' é o array de filmes retornado pelo useMovies
+    isLoading,
+    isError,
+    error,
+  } = useMovies(1, 'popularity.desc', 100); // (page, sortBy, voteCountGte)
 
-  /* dados remotos */
-  const { data: options = [] } = useMovies(0, 100, true);
-  const { data: recs, isFetching, refetch, isFetched }
-        = useRecommend(title, qtd);
-  const { data: details, isLoading: loadingDetails }
-        = useDetails(selected);
-
-  /* junta pôster/título (clique) + detalhes (fetch) */
-  const movie = selected ? { ...selected, ...details } : null;
-
-  /* handlers */
-  const handleRecommend = () => title && refetch();
-
-  const handlePosterClick = (m) => {
-    setSelected({
-      movie_id: m.movie_id,
-      title:    m.title,
-      poster:   m.poster
-    });
-    setModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setModalOpen(false);
-    setSelected(null);
-  };
-
-  /* UI */
   return (
-    <div className="home-container">
-      <h1 className="home-title">Movie Recommender</h1>
+    <div className="home p-4 sm:p-6 w-full max-w-7xl mx-auto"> {/* Ajustado padding para responsividade */}
+      <h1 className="text-3xl sm:text-4xl font-bold mb-6 sm:mb-8 text-center text-white"> {/* Título e estilo ajustados */}
+        Descubra Novos Filmes
+      </h1>
 
-      {/* seletor + quantidade + botão */}
-      <div className="selection-container">
-        <Select
-          options={options.map(o => ({ value: o.movie, label: o.movie }))}
-          onChange={opt => setTitle(opt?.value || '')}
-          placeholder="Choose a movie…"
-          className="react-select-container mb-4"
-          classNamePrefix="rs"
-          isSearchable
-        />
-
-        <div className="flex gap-3 mb-4 text-slate-300">
-          {[5,10,15,20,25,30,35,40].map(n => (
-            <label key={n} className="inline-flex items-center gap-1 cursor-pointer">
-              <input
-                type="radio" name="qtd" value={n}
-                checked={qtd === n}
-                onChange={() => setQtd(n)}
-                className="accent-sky-600"
-              />
-              {n}
-            </label>
-          ))}
-        </div>
-
-        <button
-          onClick={handleRecommend}
-          disabled={!title || isFetching}
-          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2
-                     rounded-md bg-sky-600 hover:bg-sky-700 disabled:bg-sky-300
-                     text-white transition-colors mb-8"
-        >
-          {isFetching ? 'Loading…' : 'Recommend'}
-        </button>
-      </div>
-
-      {/* grid de pôsteres */}
-      {isFetched && recs?.length > 0 && (
-        <div className="movie-grid">
-          {recs.map((m) => (
-            <div key={m.movie_id} className="movie-card"
-                 onClick={() => handlePosterClick(m)}>
-              <img src={m.poster || '/img/placeholder.jpg'} alt={m.title} />
-            </div>
-          ))}
-        </div>
+      {isLoading && (
+        <p className="mt-10 text-lg text-center text-gray-400">Carregando filmes…</p>
       )}
 
-      {/* modal */}
-      <InfoModal
-        isOpen={modalOpen}
-        onClose={closeModal}
-        movie={movie}
-        loading={loadingDetails}
-      />
+      {isError && (
+        <p className="mt-10 text-lg text-center text-red-500">
+          Ocorreu um erro ao buscar os filmes: {error?.message || 'Erro desconhecido'}
+        </p>
+      )}
 
-      <footer className="footer">
-        © {new Date().getFullYear()} Movie Recommender
-      </footer>
+      {!isLoading && !isError && movies && movies.length > 0 && (
+        // PosterGrid irá renderizar os MovieCards e gerenciar o InfoModal
+        <PosterGrid items={movies} />
+      )}
+
+      {!isLoading && !isError && (!movies || movies.length === 0) && (
+        <p className="mt-10 text-lg text-center text-gray-400">
+          Nenhum filme encontrado. Tente novamente mais tarde.
+        </p>
+      )}
     </div>
   );
 }

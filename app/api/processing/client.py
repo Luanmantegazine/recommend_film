@@ -1,13 +1,13 @@
 import os
 import requests
 import functools
-from typing import Any
+from typing import Any, Dict
 
 TMDB_KEY = os.getenv("TMDB_API_KEY") or "6177b4297dff132d300422e0343471fb"
 TMDB_V3_ROOT = "https://api.themoviedb.org/3"
 IMG_W500 = "https://image.tmdb.org/t/p/w500"
 IMG_W185 = "https://image.tmdb.org/t/p/w185"
-TIMEOUT = (3.5, 10)
+TIMEOUT = (15, 30)
 
 
 def _safe_request(url: str, params: dict[str, Any]) -> dict:
@@ -56,6 +56,12 @@ def movie_recommendations(movie_id: int, lang: str = "pt-BR") -> list[dict]:
     return data.get("results", [])
 
 
-def search_movie(query: str, lang: str="pt-BR") -> list[dict]:
+def search_movie(query: str, lang: str = "pt-BR") -> list[dict]:
     data = gett("/search/movie", language=lang, query=query)
     return data.get("results", [])
+
+
+@functools.lru_cache(maxsize=1024)
+def discover_tv_shows(**filters: Any) -> dict:
+    data = gett("/discover/tv", **filters)
+    return data

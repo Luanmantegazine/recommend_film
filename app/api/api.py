@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 import uvicorn
-from typing import Any, List, Optional
-from models import MovieBrief, MovieDetail, Cast, RecResp, Provider, WatchProviderRegionDetails, PaginatedMovieResponse
+from typing import List
+from starlette.concurrency import run_in_threadpool
+
+from models import (MovieBrief, MovieDetail, Cast, RecResp, Provider, WatchProviderRegionDetails,
+                    PaginatedMovieResponse, TVSeriesDetail,
+                    PaginatedTVSeriesResponse, TVSeriesBrief)
+
 from fastapi import FastAPI, HTTPException, Query
 from app.api.processing.preprocess import TMDBRecommender
 
 from fastapi.middleware.cors import CORSMiddleware
 from processing.client import (discover_movies, movie_details, IMG_W185, IMG_W500, fetch_person_photo,
-                               search_movie, gett)
+                               search_movie, discover_tv_shows)
 
 rec_engine = TMDBRecommender(pages=20, year_from=2000)
 app = FastAPI(
@@ -24,7 +29,7 @@ app.add_middleware(
 )
 
 
-@app.get("/movies", response_model=PaginatedMovieResponse)
+@app.get("/movies", response_model=PaginatedMovieResponse, tags=["Movies"])
 def get_movies(
         page: int = Query(1, ge=1, description="Página de resultados"),
         sort_by: str = Query("popularity.desc", description="Ordenação TMDB"),
@@ -57,7 +62,7 @@ def get_movies(
     )
 
 
-@app.get("/details/{movie_id}", response_model=MovieDetail)
+@app.get("/details/{movie_id}", response_model=MovieDetail, tags=["Movies"])
 def details(movie_id: int):
     try:
         data = movie_details(movie_id, lang="pt-BR")
@@ -120,7 +125,7 @@ def details(movie_id: int):
         director=director,
         cast=cast_list,
         poster=IMG_W500 + data["poster_path"] if data.get("poster_path") else None,
-        vote_average=round(vote_average, 1 ) if vote_average is not None else None,
+        vote_average=round(vote_average, 1) if vote_average is not None else None,
         vote_count=vote_count,
         trailer_key=trailer_key,
         watch_providers_data=watch_providers_data,
@@ -128,7 +133,7 @@ def details(movie_id: int):
     )
 
 
-@app.get("/search", response_model=List[MovieBrief])
+@app.get("/search", response_model=List[MovieBrief], tags=["Movies"])
 def search(q: str):
     results = search_movie(q)[:10]
     return [
@@ -141,11 +146,65 @@ def search(q: str):
     ]
 
 
-@app.get("/recommend/{title}", response_model=List[RecResp])
+@app.get("/recommend/{title}", response_model=List[RecResp], tags=["Recommender"])
 async def get_content_recommendations(title: str, top_k: int = Query(45, ge=1, le=50)):
     recommendations = rec_engine.recommend(title=title, top_k=top_k)
 
     return recommendations
+
+
+@app.get("tv/discover", response_model=PaginatedTVSeriesResponse, tags=["TV Séries"])
+async def get_discover_tv_shows(
+        page: int = Query(1, ge=1, description="Página de resultados"),
+        sort_by: str = Query("popularity.desc", description="Ordenação TMDB"),
+        vote_count_gte: int = Query(50, ge=0, description="Minimo de votos")
+):
+    params = {
+        "page": page,
+        "sort_by": sort_by,
+        "vote_count_gte": vote_count_gte,
+
+    }
+
+    processed_results = []
+    current_page_from_response = page
+    total_page_from_response = 0
+    total_results_from_response = 0
+
+    tmdb_data = await run_in_threadpool(discover_tv_shows, **params)
+
+    if tmdb_data and isinstance(tmdb_data, dict) and "results" in tmdb_data:
+        current_page_from_response = tmdb_data.get("page", page)
+        total_page_from_response = tmdb_data.get("total_pages", 0)
+        total_results_from_response = tmdb_data.get("total_results", 0)
+
+        for s in tmdb_data.get("results", []):
+            first_air_year = None
+            first_air_date_str = s.get("first_air_date")
+            if first_air_date_str:
+                if isinstance(first_air_date_str, str) and len(first_air_date_str) >= 4:
+                    first_air_year = first_air_date_str[:4]
+            poster_full_url = None
+            poster_path = s.get("poster_path")
+            if poster_path:
+                poster_full_url = IMG_W500 + poster_path
+
+            processed_results.append(
+                TVSeriesBrief(
+                    id=s.get("id"),
+                    name=s.get("name"),
+                    poster_url=poster_full_url,
+                    first_air_year=first_air_year,
+                    vote_average=round(s.get("vote_average", 0.0), 1) if s.get("vote_average") is not None else None
+                )
+            )
+
+    return PaginatedTVSeriesResponse(
+        page=current_page_from_response,
+        results=processed_results,
+        total_pages=total_page_from_response,
+        total_results=total_results_from_response
+    )
 
 
 if __name__ == '__main__':

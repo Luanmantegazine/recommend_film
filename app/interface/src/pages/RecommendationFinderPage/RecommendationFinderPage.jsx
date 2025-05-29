@@ -27,7 +27,7 @@ export default function RecommendationFinderPage() {
     isLoading: isLoadingRecommendations,
     isError: isRecommendationsError,
     error: recommendationsError,
-  } = useRecommend(movieTitleForApi, 10); // topK = 10
+  } = useRecommend(movieTitleForApi, 50); // topK = 10
 
   const handleSearchChange = (event) => {
     setSearchQuery(event.target.value);

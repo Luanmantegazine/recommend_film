@@ -18,7 +18,7 @@ TMDB_KEY = os.getenv("TMDB_API_KEY") or "6177b4297dff132d300422e0343471fb"
 if not TMDB_KEY:
     raise RuntimeError("Defina TMDB_API_KEY no ambiente")
 
-HTTP_TIMEOUT = (3.5, 30)
+HTTP_TIMEOUT = (15, 30)
 POSTER_URL = "https://image.tmdb.org/t/p/w780/"
 
 nltk.download("stopwords")

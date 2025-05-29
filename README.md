@@ -10,23 +10,23 @@ Este projeto é uma plataforma intuitiva com um tema escuro e minimalista, inspi
 
 <p align="center">
   <strong>Página Inicial</strong><br>
-  <img src="/Users/luanr/pycharm/recommend_films/Captura de Tela 2025-05-29 às 20.06.47.png" alt="Página Home do Movie Recommender" width="700"/>
+  <img src="Captura de Tela 2025-05-29 às 20.06.47.png" alt="Página Home do Movie Recommender" width="700"/>
 </p>
 <p align="center">
   <strong>Listagem de Filmes Lançamento</strong><br>
-  <img src="/Users/luanr/pycharm/recommend_films//Captura_de_Tela_2025-05-29_as_20.07.06.jpg" alt="Listagem de Filmes Lançamento" width="700"/>
+  <img src="Captura de Tela 2025-05-29 às 20.07.06.png" alt="Listagem de Filmes Lançamento" width="700"/>
 </p>
 <p align="center">
   <strong>Modal de Detalhes do Filme - Informações</strong><br>
-  <img src="/Users/luanr/pycharm/recommend_films//Captura_de_Tela_2025-05-29_as_20.07.35.jpg" alt="Modal de Detalhes do Filme - Informações" width="700"/>
+  <img src="Captura de Tela 2025-05-29 às 20.07.35.png" alt="Modal de Detalhes do Filme - Informações" width="700"/>
 </p>
 <p align="center">
   <strong>Modal de Detalhes do Filme - Elenco e Trailer</strong><br>
-  <img src="/Users/luanr/pycharm/recommend_films//Captura_de_Tela_2025-05-29_as_20.07.52.jpg" alt="Modal de Detalhes do Filme - Elenco e Trailer" width="700"/>
+  <img src="Captura de Tela 2025-05-29 às 20.07.52.png" alt="Modal de Detalhes do Filme - Elenco e Trailer" width="700"/>
 </p>
 <p align="center">
   <strong>Página de Recomendações de Filmes</strong><br>
-  <img src="/Users/luanr/pycharm/recommend_films//Captura_de_Tela_2025-05-29_as_20.08.19.jpg" alt="Página de Recomendações de Filmes" width="700"/>
+  <img src="Captura de Tela 2025-05-29 às 20.08.19.png" alt="Página de Recomendações de Filmes" width="700"/>
 </p>
 
 ## Funcionalidades Principais

@@ -33,6 +33,10 @@ class MovieDetail(BaseModel):
     cast: list[Cast] = []
     poster: str
 
+    vote_average: Optional[float] = None
+    vote_count: Optional[int] = None
+    trailer_key: Optional[str] = None  #
+    watch_providers: Optional[WatchProviderRegionDetails] = None
 
 class RecommendRequest(BaseModel):
     liked_movies: List[str] = Field("likedMovies", alias="title")
@@ -41,11 +45,14 @@ class RecommendRequest(BaseModel):
     class Config:
         allow_population_by_field_name = True
         allow_population_by_alias = True
+class Provider(BaseModel):
+    logo_path: Optional[str] = None
+    provider_id: int
+    provider_name: str
+    display_priority: Optional[int] = None
 
-class QuizAnswer(BaseModel):
-    genre_id:       int
-    favorite_movie: Optional[str] = None
-    mood:           Optional[str] = None
-    themes:         list[str] = []
-    top_k:          int = 10
-
+class WatchProviderRegionDetails(BaseModel):
+    link: Optional[str] = None
+    flatrate: Optional[List[Provider]] = None 
+    rent: Optional[List[Provider]] = None    
+    buy: Optional[List[Provider]] = None     

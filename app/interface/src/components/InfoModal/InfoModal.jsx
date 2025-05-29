@@ -1,5 +1,11 @@
-import PropTypes from 'prop-types'
-import './InfoModal.css'
+// src/components/InfoModal/InfoModal.jsx
+import React from 'react';
+import YouTube from 'react-youtube'; // Biblioteca para player do YouTube: npm install react-youtube
+import './InfoModal.css';
+
+// Base URL para logos dos provedores de streaming (TMDB)
+const TMDB_PROVIDER_LOGO_BASE_URL = "https://image.tmdb.org/t/p/w92"; // w92 é um bom tamanho
+
 export default function InfoModal({ isOpen, onClose, movie, loading }) {
   if (!isOpen) return null;
 
@@ -9,10 +15,58 @@ export default function InfoModal({ isOpen, onClose, movie, loading }) {
     genres   = [],
     director = '',
     cast     = [],
-    poster
+    poster,
+    // NOVOS DADOS
+    vote_average,
+    vote_count,
+    trailer_key,
+    watch_providers
   } = movie || {};
 
-   return (
+  const renderStars = (rating) => {
+    const starsTotal = 5;
+    const starPercentage = (rating / 10) * 100;
+    const starPercentageRounded = `${Math.round(starPercentage / 10) * 10}%`;
+    return (
+      <div className="stars-outer">
+        <div className="stars-inner" style={{ width: starPercentageRounded }}></div>
+      </div>
+    );
+  };
+  
+  const optsYouTube = {
+    height: '390', // Pode ser responsivo com CSS
+    width: '100%', // Ocupa 100% do container do trailer
+    playerVars: {
+      autoplay: 0, // Não tocar automaticamente
+      modestbranding: 1,
+      rel: 0, // Não mostrar vídeos relacionados ao final
+    },
+  };
+
+  const renderProviders = (providersList, sectionTitle) => {
+    if (!providersList || providersList.length === 0) return null;
+    return (
+      <div className="providers-section">
+        <h4 className="providers-title">{sectionTitle}</h4>
+        <ul className="providers-list">
+          {providersList.map(provider => (
+            <li key={provider.provider_id} className="provider-item" title={provider.provider_name}>
+              <img 
+                src={`${TMDB_PROVIDER_LOGO_BASE_URL}${provider.logo_path}`} 
+                alt={provider.provider_name} 
+                className="provider-logo"
+              />
+              {/* <span className="provider-name">{provider.provider_name}</span> Opicional: mostrar nome */}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+
+
+  return (
     <div
       className="info-modal-backdrop"
       onClick={onClose}
@@ -20,76 +74,83 @@ export default function InfoModal({ isOpen, onClose, movie, loading }) {
       aria-modal="true"
       aria-labelledby="info-modal-title"
     >
-      <div
-        className="info-modal"
-        onClick={e => e.stopPropagation()}
-      >
-        <button className="info-modal__close" onClick={onClose} aria-label="Fechar">
-          ✕
-        </button>
+      <div className="info-modal" onClick={e => e.stopPropagation()}>
+        <button className="info-modal__close" onClick={onClose} aria-label="Fechar">✕</button>
 
-        <img
-          src={poster || '/img/placeholder.jpg'}
-          alt={title === 'Carregando…' ? 'Carregando poster' : `Poster de ${title}`}
-          className="info-modal__poster"
-        />
+        <div className="modal-layout-primary"> {/* Novo container para poster e conteúdo principal */}
+          <img
+            src={poster || '/img/placeholder.jpg'}
+            alt={title === 'Carregando…' ? 'Carregando poster' : `Poster de ${title}`}
+            className="info-modal__poster"
+          />
 
-        <div className="info-modal__content">
-          <h2 className="info-modal__title" id="info-modal-title">{title}</h2>
-
-          {loading ? (
-            <p>Carregando detalhes…</p>
-          ) : !movie ? (
-            <p>Não foi possível carregar os detalhes do filme.</p>
-          ) : (
-            <>
-              <p className="info-modal__overview">{overview}</p>
-
-              <div className="info-modal__meta">
-                <p><strong>Gênero:</strong> {Array.isArray(genres) ? genres.join(', ') : ''}</p>
-                <p><strong>Diretor:</strong> {director}</p>
+          <div className="info-modal__content">
+            <h2 className="info-modal__title" id="info-modal-title">{title}</h2>
+            
+            {/* AVALIAÇÕES */}
+            {loading ? <p>Carregando avaliações...</p> : (vote_average !== null && vote_average > 0) && (
+              <div className="ratings-section">
+                <span className="rating-value">{vote_average.toFixed(1)}</span>
+                {renderStars(vote_average)}
+                <span className="vote-count">({vote_count?.toLocaleString('pt-BR')} votos)</span>
               </div>
+            )}
 
-              {Array.isArray(cast) && cast.length > 0 && (
-                <>
-                  <h3 className="info-modal__subtitle">Elenco</h3>
-                  <ul className="cast-list">
-                    {cast.slice(0, 8).map((p) => (
-                      <li key={p.id || p.name} className="cast-item">
-                        <img
-                          src={p.photo}
-                          alt={p.name}
-                          className="cast-photo"
-                          loading="lazy"
-                        />
-                        <span className="cast-name">{p.name}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </>
-          )}
+            <p className="info-modal__overview">{loading ? "Carregando..." : overview}</p>
+
+            <div className="info-modal__meta">
+              <p><strong>Gênero:</strong> {loading ? "..." : (Array.isArray(genres) ? genres.join(', ') : '')}</p>
+              <p><strong>Diretor:</strong> {loading ? "..." : director}</p>
+            </div>
+
+            {/* ONDE ASSISTIR */}
+            {!loading && watch_providers && (watch_providers.flatrate || watch_providers.buy || watch_providers.rent) && (
+              <div className="watch-on-section">
+                <h3 className="info-modal__subtitle">Onde Assistir (BR)</h3>
+                {renderProviders(watch_providers.flatrate, "Streaming")}
+                {renderProviders(watch_providers.buy, "Comprar")}
+                {renderProviders(watch_providers.rent, "Alugar")}
+                {watch_providers.link && (
+                   <a href={watch_providers.link} target="_blank" rel="noopener noreferrer" className="tmdb-providers-link">
+                     Ver todas as opções no TMDB
+                   </a>
+                )}
+              </div>
+            )}
+            
+            {/* ELENCO */}
+            {!loading && Array.isArray(cast) && cast.length > 0 && (
+              <>
+                <h3 className="info-modal__subtitle">Elenco Principal</h3>
+                <ul className="cast-list">
+                  {cast.slice(0, 8).map((castMember) => (
+                    <li key={castMember.id || castMember.name} className="cast-item">
+                      <img
+                        src={castMember.photo || '/img/avatar-placeholder.png'} // Fallback para foto do ator
+                        alt={castMember.name}
+                        className="cast-photo"
+                        loading="lazy"
+                      />
+                      <span className="cast-name">{castMember.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
         </div>
+        
+        {/* TRAILER */}
+        {!loading && trailer_key && (
+          <div className="trailer-section">
+            <h3 className="info-modal__subtitle trailer-title">Trailer Oficial</h3>
+            <div className="video-responsive-container">
+              <YouTube videoId={trailer_key} opts={optsYouTube} />
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
 }
-
- InfoModal.propTypes = {
-   isOpen: PropTypes.bool.isRequired,
-   onClose: PropTypes.func.isRequired,
-   movie: PropTypes.shape({
-     title: PropTypes.string,
-     overview: PropTypes.string,
-     genres: PropTypes.arrayOf(PropTypes.string),
-     director: PropTypes.string,
-     cast: PropTypes.arrayOf(PropTypes.shape({
-       id: PropTypes.any, // ou PropTypes.number / PropTypes.string
-       name: PropTypes.string,
-       photo: PropTypes.string,
-     })),
-     poster: PropTypes.string,
-   }),
-   loading: PropTypes.bool,
- };

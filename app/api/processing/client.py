@@ -25,7 +25,7 @@ def gett(path: str, **params: Any) -> dict:
 
 
 @functools.lru_cache(maxsize=256)
-def list_genres(lang: str = "en-US") -> dict[str, int]:
+def list_genres(lang: str = "pt-BR") -> dict[str, int]:
     data = gett("/genre/movie/list", language=lang)
     return {g["name"].lower(): g["id"] for g in data.get("genres", [])}
 
@@ -37,7 +37,7 @@ def discover_movies(**filters: Any) -> list[dict]:
 
 
 @functools.lru_cache(maxsize=4096)
-def movie_details(movie_id: int, lang: str = "en-US") -> dict:
+def movie_details(movie_id: int, lang: str = "pt-BR") -> dict:
     return gett(f"/movie/{movie_id}", language=lang, append_to_response="credits")
 
 
@@ -51,10 +51,11 @@ def fetch_person_photo(person_id: int) -> str | None:
 
 
 @functools.lru_cache(maxsize=4096)
-def movie_recommendations(movie_id: int, lang: str = "en-US") -> list[dict]:
+def movie_recommendations(movie_id: int, lang: str = "pt-BR") -> list[dict]:
     data = gett(f"/movie/{movie_id}/recommendations", language=lang)
     return data.get("results", [])
 
-def search_movie(query: str, lang: str="en-US") -> list[dict]:
+
+def search_movie(query: str, lang: str="pt-BR") -> list[dict]:
     data = gett("/search/movie", language=lang, query=query)
     return data.get("results", [])

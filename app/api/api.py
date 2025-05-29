@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import uvicorn
-from typing import Any, List
-from models import MovieBrief, MovieDetail, Cast, QuizAnswer, RecResp
+from typing import Any, List, Optional
+from models import MovieBrief, MovieDetail, Cast, RecResp, Provider, WatchProviderRegionDetails
 from fastapi import FastAPI, HTTPException, Query
 from app.api.processing.preprocess import TMDBRecommender
 
@@ -53,7 +53,7 @@ def get_movies(
 @app.get("/details/{movie_id}", response_model=MovieDetail)
 def details(movie_id: int):
     try:
-        data = movie_details(movie_id, lang="en-US")
+        data = movie_details(movie_id, lang="pt-BR")
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Erro TMDB: {e}")
 
@@ -62,6 +62,7 @@ def details(movie_id: int):
         pid = member.get("id")
         name = member.get("name", "")
         profile = member.get("profile_path")
+
         if profile:
             photo_url = IMG_W185 + profile
         else:
@@ -72,6 +73,38 @@ def details(movie_id: int):
     crew = data.get("credits", {}).get("crew", [])
     director = next((c["name"] for c in crew if c.get("job") == 'Director'), None)
 
+    vote_average = data.get("vote_average")
+    vote_count = data.get("vote_count")
+
+    trailer_key = None
+
+    if data.get("videos") and data["videos"].get("results"):
+        videos = data["videos"]["results"]
+        official_trailers = [
+            v for v in videos
+            if v.get("site") == "YouTube" and v.get("type") == "Trailer" and v.get("official") is True
+        ]
+        if official_trailers:
+            trailer_key = official_trailers[0].get("key")
+        else:
+            any_trailers = [
+                v for v in videos if v.get("site") == "YouTube" and v.get("type") == "Trailer"
+            ]
+            if any_trailers:
+                trailer_key = any_trailers[0].get("key")
+
+    watch_providers_data = None
+    if data.get("watch/providers") and data["watch/providers"].get("results"):
+        results_by_country = data["watch/providers"]["results"]
+        if "BR" in results_by_country:
+            br_providers = results_by_country["BR"]
+            watch_providers_data = WatchProviderRegionDetails(
+                link=br_providers.get("link"),
+                flatrate=[Provider(**p) for p in br_providers.get("flatrate", [])],
+                rent=[Provider(**p) for p in br_providers.get("rent", [])],
+                buy=[Provider(**p) for p in br_providers.get("buy", [])]
+            )
+
     return MovieDetail(
         movie_id=movie_id,
         title=data.get("title", ""),
@@ -80,6 +113,11 @@ def details(movie_id: int):
         director=director,
         cast=cast_list,
         poster=IMG_W500 + data["poster_path"] if data.get("poster_path") else None,
+        vote_average=round(vote_average, 1 ) if vote_average is not None else None,
+        vote_count=vote_count,
+        trailer_key=trailer_key,
+        watch_providers_data=watch_providers_data,
+
     )
 
 

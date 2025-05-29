@@ -22,8 +22,8 @@ HTTP_TIMEOUT = (3.5, 30)
 POSTER_URL = "https://image.tmdb.org/t/p/w780/"
 
 nltk.download("stopwords")
-STEMMER = SnowballStemmer("english")
-STOP_WORDS = set(stopwords.words("english"))
+STEMMER = SnowballStemmer("portuguese")
+STOP_WORDS = set(stopwords.words("portuguese"))
 
 
 def _normalize_tokens(tokens: List[str]) -> List[str]:
@@ -61,13 +61,16 @@ def build_dataframe_from_tmdb(
 
     def _fetch_detail(mid: int) -> dict | None:
         try:
-            det = movie_details(mid, lang="en-US")
+            det = movie_details(mid, lang="pt-BR")
+            movie_keywords_list = []
+            if det.get("keywords") and isinstance(det["keywords"], dict) and "keywords" in det["keywords"]:
+                movie_keywords_list = [kw["name"] for kw in det["keywords"]["keywords"]]
             return {
                 "movie_id": mid,
                 "title": det.get("title", ""),
                 "overview": det.get("overview") or "",
                 "genres": [g["name"] for g in det.get("genres", [])],
-                "keywords": [kw["name"] for kw in det.get("keywords", {}).get("keywords", [])],
+                "keywords": movie_keywords_list,
                 "director": next(
                     (c["name"] for c in det.get("credits", {}).get("crew", [])
                      if c.get("job") == "Director"),

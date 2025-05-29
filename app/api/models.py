@@ -96,8 +96,23 @@ class TVSeriesDetail(BaseModel):
     number_of_episodes: Optional[int] = None
     number_of_seasons: Optional[int] = None
     poster_url: Optional[str] = None
+    backdrop_url: Optional[str] = None
     vote_average: Optional[float] = None
     vote_count: Optional[int] = None
     trailer_key: Optional[str] = None
+    status: Optional[str] = None
+    tagline: Optional[str] = None
+    homepage: Optional[str] = None
     watch_providers: Optional[WatchProviderRegionDetails] = None
     aggregate_credits: Optional[Dict[str, List[Cast]]] = None
+    keywords: List[str] = []
+    cast: List[Cast] = []
+    seasons: Optional[List[Dict[str, Any]]] = None
+
+
+class Creator(BaseModel):
+    id: int
+    credit_id: str
+    name: str
+    gender: Optional[int] = None
+    profile_path: Optional[str] = None

@@ -6,14 +6,14 @@ from starlette.concurrency import run_in_threadpool
 
 from models import (MovieBrief, MovieDetail, Cast, RecResp, Provider, WatchProviderRegionDetails,
                     PaginatedMovieResponse, TVSeriesDetail,
-                    PaginatedTVSeriesResponse, TVSeriesBrief)
+                    PaginatedTVSeriesResponse, TVSeriesBrief, Creator)
 
 from fastapi import FastAPI, HTTPException, Query
 from app.api.processing.preprocess import TMDBRecommender
 
 from fastapi.middleware.cors import CORSMiddleware
 from processing.client import (discover_movies, movie_details, IMG_W185, IMG_W500, fetch_person_photo,
-                               search_movie, discover_tv_shows)
+                               search_movie, discover_tv_shows, IMG_W1280, IMG_W780, tv_series_details)
 
 rec_engine = TMDBRecommender(pages=20, year_from=2000)
 app = FastAPI(
@@ -65,7 +65,7 @@ def get_movies(
 @app.get("/details/{movie_id}", response_model=MovieDetail, tags=["Movies"])
 def details(movie_id: int):
     try:
-        data = movie_details(movie_id, lang="pt-BR")
+        data = movie_details(movie_id, lang="pt-BR", append_to_response="credits,keywords,videos,watch/providers")
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Erro TMDB: {e}")
 
@@ -204,6 +204,124 @@ async def get_discover_tv_shows(
         results=processed_results,
         total_pages=total_page_from_response,
         total_results=total_results_from_response
+    )
+
+
+@app.get("/tv/{series_id}/details", response_model=TVSeriesDetail, tags=["TV Séries"])
+async def get_tv_series_details(series_id: int, lang: str = Query("pt-BR")):
+    append_items = "aggregate_credits,keywords,videos,watch/providers"
+    data = await run_in_threadpool(
+        tv_series_details,
+        series_id=series_id,
+        lang=lang,
+        append_to_response=append_items,
+    )
+    genres = [g["name"] for g in data.get("genres", []) if isinstance(g, dict) and "name" in g]
+
+    created_by_dicts = []
+    for creator_data in data.get("created_by", []):
+        if isinstance(creator_data, dict):
+            profile_full_url = None
+            if creator_data.get("profile_path"):
+                profile_full_url = IMG_W185 + creator_data["profile_path"]
+
+            creator_id = creator_data.get("id")
+            credit_id_val = creator_data.get("credit_id")
+            name_val = creator_data.get("name")
+
+            if creator_id is not None and credit_id_val is not None and name_val is not None:
+                created_by_dicts.append({
+                    "id": creator_id,
+                    "credit_id": credit_id_val,
+                    "name": name_val,
+                    "gender": creator_data.get("gender"),
+                    "profile_path": profile_full_url
+                })
+
+    main_cast_list_dicts = []
+    if data.get("aggregate_credits") and isinstance(data["aggregate_credits"], dict):
+        for member_data in data["aggregate_credits"].get("cast", [])[:15]:
+            if isinstance(member_data, dict):
+                photo_full_url = None
+                if member_data.get("profile_path"):
+                    photo_full_url = IMG_W185 + member_data["profile_path"]
+
+                character_name = None
+                roles = member_data.get("roles", [])
+                if roles and isinstance(roles, list) and len(roles) > 0 and isinstance(roles[0], dict):
+                    character_name = roles[0].get("character")
+
+                main_cast_list_dicts.append({
+                    "id": member_data.get("id"),
+                    "name": member_data.get("name"),
+                    "photo": photo_full_url,
+                    "character": character_name
+                })
+
+    keywords_list = []
+    if data.get("keywords") and isinstance(data["keywords"], dict) and "results" in data[
+        "keywords"]:
+        keywords_list = [kw["name"] for kw in data["keywords"]["results"] if isinstance(kw, dict) and "name" in kw]
+    elif data.get("keywords") and isinstance(data["keywords"], dict) and "keywords" in data[
+        "keywords"]:
+        keywords_list = [kw["name"] for kw in data["keywords"]["keywords"] if isinstance(kw, dict) and "name" in kw]
+
+    trailer_key = None
+    if data.get("videos") and data["videos"].get("results"):
+        videos = data["videos"]["results"]
+        official_trailers = [v for v in videos if
+                             v.get("site") == "YouTube" and v.get("type") == "Trailer" and v.get("official") is True]
+        if official_trailers:
+            trailer_key = official_trailers[0].get("key")
+        else:
+            any_trailers = [v for v in videos if v.get("site") == "YouTube" and v.get("type") == "Trailer"]
+            if any_trailers:
+                trailer_key = any_trailers[0].get("key")
+
+    watch_providers_data = None
+    watch_providers_response_key = "watch/providers"
+    if data.get(watch_providers_response_key) and data[watch_providers_response_key].get("results"):
+        results_by_country = data[watch_providers_response_key]["results"]
+        if "BR" in results_by_country:
+            br_providers = results_by_country["BR"]
+            watch_providers_data = WatchProviderRegionDetails(
+                link=br_providers.get("link"),
+                flatrate=[Provider(**p) for p in br_providers.get("flatrate", []) if isinstance(p, dict)],
+                rent=[Provider(**p) for p in br_providers.get("rent", []) if isinstance(p, dict)],
+                buy=[Provider(**p) for p in br_providers.get("buy", []) if isinstance(p, dict)]
+            )
+
+    poster_full_url = None
+    if data.get("poster_path"):
+        poster_full_url = IMG_W500 + data["poster_path"]
+
+    backdrop_full_url = None
+    if data.get("backdrop_path"):
+        backdrop_full_url = IMG_W1280 + data["backdrop_path"] if 'IMG_W1280' in globals() else IMG_W780 + data[
+            "backdrop_path"]
+
+    return TVSeriesDetail(
+        id=data.get("id"),
+        name=data.get("name"),
+        overview=data.get("overview"),
+        genres=genres,
+        created_by=created_by_dicts,
+        episode_run_time=data.get("episode_run_time", []),
+        first_air_date=data.get("first_air_date"),
+        last_air_date=data.get("last_air_date"),
+        number_of_episodes=data.get("number_of_episodes"),
+        number_of_seasons=data.get("number_of_seasons"),
+        poster_url=poster_full_url,
+        backdrop_url=backdrop_full_url,
+        vote_average=round(data.get("vote_average", 0.0), 1) if data.get("vote_average") is not None else None,
+        vote_count=data.get("vote_count"),
+        status=data.get("status"),
+        tagline=data.get("tagline"),
+        homepage=data.get("homepage"),
+        trailer_key=trailer_key,
+        watch_providers=watch_providers_data,
+        cast=main_cast_list_dicts,
+        keywords=keywords_list
     )
 
 

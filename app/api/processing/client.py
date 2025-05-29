@@ -1,12 +1,14 @@
 import os
 import requests
 import functools
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 TMDB_KEY = os.getenv("TMDB_API_KEY") or "6177b4297dff132d300422e0343471fb"
 TMDB_V3_ROOT = "https://api.themoviedb.org/3"
 IMG_W500 = "https://image.tmdb.org/t/p/w500"
 IMG_W185 = "https://image.tmdb.org/t/p/w185"
+IMG_W780 = "https://image.tmdb.org/t/p/w780"
+IMG_W1280 = "https://image.tmdb.org/t/p/w1280"
 TIMEOUT = (15, 30)
 
 
@@ -37,8 +39,10 @@ def discover_movies(**filters: Any) -> dict:
 
 
 @functools.lru_cache(maxsize=4096)
-def movie_details(movie_id: int, lang: str = "pt-BR") -> dict:
-    return gett(f"/movie/{movie_id}", language=lang, append_to_response="credits")
+def movie_details(movie_id: int,
+                  lang: str = "pt-BR",
+                  append_to_response: Optional[str] = "credits") -> dict:
+    return gett(f"/movie/{movie_id}", language=lang, append_to_response=append_to_response)
 
 
 @functools.lru_cache(maxsize=4096)
@@ -64,4 +68,18 @@ def search_movie(query: str, lang: str = "pt-BR") -> list[dict]:
 @functools.lru_cache(maxsize=1024)
 def discover_tv_shows(**filters: Any) -> dict:
     data = gett("/discover/tv", **filters)
+    return data
+
+
+@functools.lru_cache(maxsize=256)
+def tv_series_details(series_id: int,
+                      lang: str = "pt-BR",
+                      append_to_response: Optional[str] = None
+                      ) -> Dict[str, Any]:
+    path = f"/tv/{series_id}"
+    api_call_params = {"language": lang}
+    if append_to_response:
+        api_call_params["append_to_response"] = append_to_response
+
+    data = gett(path, **api_call_params)
     return data

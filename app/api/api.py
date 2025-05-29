@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uvicorn
 from typing import Any, List, Optional
-from models import MovieBrief, MovieDetail, Cast, RecResp, Provider, WatchProviderRegionDetails
+from models import MovieBrief, MovieDetail, Cast, RecResp, Provider, WatchProviderRegionDetails, PaginatedMovieResponse
 from fastapi import FastAPI, HTTPException, Query
 from app.api.processing.preprocess import TMDBRecommender
 
@@ -24,7 +24,7 @@ app.add_middleware(
 )
 
 
-@app.get("/movies", response_model=List[MovieBrief])
+@app.get("/movies", response_model=PaginatedMovieResponse)
 def get_movies(
         page: int = Query(1, ge=1, description="Página de resultados"),
         sort_by: str = Query("popularity.desc", description="Ordenação TMDB"),
@@ -36,18 +36,25 @@ def get_movies(
         "page": page,
     }
 
-    results = discover_movies(**params)
-    return [
+    tmdb_data = discover_movies(**params)
+
+    processed_results = [
         MovieBrief(
             id=m["id"],
             title=m["title"],
             poster=IMG_W500 + m["poster_path"] if m.get("poster_path") else None,
             year=(m.get("release_date") or "")[:4] or None,
             rating=m.get("vote_average")
-
         )
-        for m in results
+        for m in tmdb_data.get("results", [])
     ]
+
+    return PaginatedMovieResponse(
+        page=tmdb_data.get("page"),
+        results=processed_results,
+        total_pages=tmdb_data.get("total_pages"),
+        total_results=tmdb_data.get("total_results")
+    )
 
 
 @app.get("/details/{movie_id}", response_model=MovieDetail)

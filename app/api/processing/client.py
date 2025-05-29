@@ -31,9 +31,9 @@ def list_genres(lang: str = "pt-BR") -> dict[str, int]:
 
 
 @functools.lru_cache(maxsize=1024)
-def discover_movies(**filters: Any) -> list[dict]:
+def discover_movies(**filters: Any) -> dict:
     data = gett("/discover/movie", **filters)
-    return data.get("results", [])
+    return data
 
 
 @functools.lru_cache(maxsize=4096)

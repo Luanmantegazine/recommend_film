@@ -46,4 +46,13 @@
   margin-right: auto;
 }
 
+.load-more-trigger {
+  height: 80px; /* Altura para o elemento ser "observável" */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+
 /* O componente PosterGrid é estilizado pelo seu próprio PosterGrid.css */

@@ -45,7 +45,7 @@ def build_dataframe_from_tmdb(
 ) -> pd.DataFrame:
     from app.api.processing.client import discover_movies
 
-    stub: List[dict] = []
+    stub: List[Dict[dict, Any]] = []
     for p in range(1, pages + 1):
         params = {
             "sort_by": "popularity.desc",
@@ -54,10 +54,19 @@ def build_dataframe_from_tmdb(
         }
         if year_from:
             params["primary_release_date.gte"] = f"{year_from}-01-01"
-        stub.extend(discover_movies(**params))
+        response_dict = discover_movies(**params)
 
-    ids = [m["id"] for m in stub]
-    records: List[dict] = []
+        if response_dict and isinstance(response_dict, dict) and "results" in response_dict:
+            movies_from_this_page = response_dict.get("results", [])
+            if movies_from_this_page:
+                stub.extend(movies_from_this_page)
+    if not stub:
+        return pd.DataFrame()
+
+    ids = [m["id"] for m in stub if isinstance(m, dict) and "id" in m]
+    if not ids:
+        print("WARN: Lista de IDs vazia após processar o stub.")
+        return pd.DataFrame()
 
     def _fetch_detail(mid: int) -> dict | None:
         try:
@@ -83,6 +92,8 @@ def build_dataframe_from_tmdb(
             return None
         except Exception:
             return None
+
+    records: List[dict] = []
 
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         futures = {pool.submit(_fetch_detail, mid): mid for mid in ids}

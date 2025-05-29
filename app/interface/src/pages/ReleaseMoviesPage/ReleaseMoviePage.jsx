@@ -1,23 +1,66 @@
 // src/pages/ReleaseMoviesPage.jsx
-import React from 'react';
-import PosterGrid from '@/components/PosterGrid/PosterGrid'; // Ajuste o caminho se necessário
-import { useMovies } from '@/hooks/useMovies'; // Ajuste o caminho se necessário
-import './ReleaseMoviesPage.css'; // CSS específico para esta página
+import React, { useEffect } from 'react';
+import PosterGrid from '@/components/PosterGrid/PosterGrid';
+import { useInfiniteMovies } from '@/hooks/useMovies';
+import { useInView } from 'react-intersection-observer';
+import './ReleaseMoviesPage.css';
 
 export default function ReleaseMoviesPage() {
   const {
-    data: movies,
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     isLoading,
     isError,
     error,
-  } = useMovies(
-    1, // Página 1
-    'primary_release_date.desc', // Ordenar por data de lançamento
-    50 // Mínimo de 50 votos
-  );
+  } = useInfiniteMovies('primary_release_date.desc', 50);
+
+  // DEBUG: Inspecionar os dados das páginas
+  useEffect(() => {
+    if (data?.pages) {
+      console.log("Dados brutos de data.pages:", data.pages);
+      data.pages.forEach((page, index) => {
+        if (!page || !page.results) {
+          console.warn(`Página ${index + 1} está malformada ou sem results:`, page);
+        } else if (page.results.some(movie => movie === undefined || movie === null)) {
+          console.warn(`Página ${index + 1} contém filmes undefined/null em results:`, page.results);
+        }
+      });
+    }
+  }, [data]);
+
+  // AJUSTE: Tornar a construção do array 'movies' mais segura
+  const movies = data?.pages.reduce((acc, page) => {
+    if (page && Array.isArray(page.results)) {
+      // Filtra quaisquer itens nulos ou indefinidos dentro de page.results
+      const validResults = page.results.filter(movie => movie != null);
+      acc.push(...validResults);
+    }
+    return acc;
+  }, []) || [];
+
+  // DEBUG: Ver o array 'movies' processado
+  useEffect(() => {
+    if (movies.length > 0 && movies.some(movie => movie === undefined || movie === null)) {
+        console.error("Array 'movies' final contém undefined/null:", movies);
+    }
+  }, [movies]);
+
+
+  const { ref, inView } = useInView({
+    threshold: 0.5,
+  });
+
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
     <div className="page-container p-4 sm:p-6 w-full max-w-7xl mx-auto">
+      {/* ... (H1, isLoading, isError, etc. como antes) ... */}
       <h1 className="page-title text-3xl sm:text-4xl font-bold mb-6 sm:mb-8 text-center text-white">
         Filmes Lançamento
       </h1>
@@ -32,11 +75,20 @@ export default function ReleaseMoviesPage() {
         </p>
       )}
 
-      {!isLoading && !isError && movies && movies.length > 0 && (
+      {!isLoading && !isError && movies.length > 0 && (
         <PosterGrid items={movies} />
       )}
 
-      {!isLoading && !isError && (!movies || movies.length === 0) && (
+      <div className="load-more-trigger" ref={ref}>
+        {isFetchingNextPage && (
+          <p className="status-message mt-8 text-center">Carregando mais filmes…</p>
+        )}
+        {!isFetchingNextPage && !hasNextPage && movies.length > 0 && (
+          <p className="status-message mt-8 text-center">Você chegou ao fim da lista!</p>
+        )}
+      </div>
+
+      {!isLoading && !isError && movies.length === 0 && (
         <p className="status-message mt-10 text-lg text-center">
           Nenhum lançamento encontrado no momento.
         </p>

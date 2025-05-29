@@ -56,3 +56,9 @@ class WatchProviderRegionDetails(BaseModel):
     flatrate: Optional[List[Provider]] = None 
     rent: Optional[List[Provider]] = None    
     buy: Optional[List[Provider]] = None     
+
+class PaginatedMovieResponse(BaseModel):
+    page: int
+    results: List[MovieBrief]
+    total_pages: int
+    total_results: int

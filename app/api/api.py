@@ -153,7 +153,7 @@ async def get_content_recommendations(title: str, top_k: int = Query(45, ge=1, l
     return recommendations
 
 
-@app.get("tv/discover", response_model=PaginatedTVSeriesResponse, tags=["TV Séries"])
+@app.get("/tv/discover", response_model=PaginatedTVSeriesResponse, tags=["TV Séries"])
 async def get_discover_tv_shows(
         page: int = Query(1, ge=1, description="Página de resultados"),
         sort_by: str = Query("popularity.desc", description="Ordenação TMDB"),

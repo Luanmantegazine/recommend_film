@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import InfoModal from "@/components/InfoModal/InfoModal";
@@ -48,12 +47,14 @@ export default function PosterGrid({ items, className = '' }) {
             return null;
           }
 
+          const displayTitle = item.title || item.name;
+
           return (
             <div key={itemId} className="poster-item">
               <MovieCard
                 movieId={itemId}
-                title={item.title}
-                poster={item.poster}
+                title={displayTitle}
+                poster={item.poster || item.poster_url}
                 onClick={() => handleMovieCardClick(itemId)}
               />
             </div>
@@ -77,9 +78,10 @@ PosterGrid.propTypes = {
       id: PropTypes.any,
       movie_id: PropTypes.any,
       title: PropTypes.string,
+      name: PropTypes.string,
       poster: PropTypes.string,
-
+      poster_url: PropTypes.string,
     })
   ).isRequired,
   className: PropTypes.string,
-};
+};;

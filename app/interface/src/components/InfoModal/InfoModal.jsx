@@ -1,10 +1,9 @@
-// src/components/InfoModal/InfoModal.jsx
 import React from 'react';
-import YouTube from 'react-youtube'; // Biblioteca para player do YouTube: npm install react-youtube
+import YouTube from 'react-youtube';
 import './InfoModal.css';
 
-// Base URL para logos dos provedores de streaming (TMDB)
-const TMDB_PROVIDER_LOGO_BASE_URL = "https://image.tmdb.org/t/p/w92"; // w92 é um bom tamanho
+
+const TMDB_PROVIDER_LOGO_BASE_URL = "https://image.tmdb.org/t/p/w92";
 
 export default function InfoModal({ isOpen, onClose, movie, loading }) {
   if (!isOpen) return null;
@@ -16,7 +15,6 @@ export default function InfoModal({ isOpen, onClose, movie, loading }) {
     director = '',
     cast     = [],
     poster,
-    // NOVOS DADOS
     vote_average,
     vote_count,
     trailer_key,
@@ -35,12 +33,12 @@ export default function InfoModal({ isOpen, onClose, movie, loading }) {
   };
   
   const optsYouTube = {
-    height: '390', // Pode ser responsivo com CSS
-    width: '100%', // Ocupa 100% do container do trailer
+    height: '390',
+    width: '100%',
     playerVars: {
-      autoplay: 0, // Não tocar automaticamente
+      autoplay: 0,
       modestbranding: 1,
-      rel: 0, // Não mostrar vídeos relacionados ao final
+      rel: 0,
     },
   };
 
@@ -57,7 +55,6 @@ export default function InfoModal({ isOpen, onClose, movie, loading }) {
                 alt={provider.provider_name} 
                 className="provider-logo"
               />
-              {/* <span className="provider-name">{provider.provider_name}</span> Opicional: mostrar nome */}
             </li>
           ))}
         </ul>
@@ -77,7 +74,7 @@ export default function InfoModal({ isOpen, onClose, movie, loading }) {
       <div className="info-modal" onClick={e => e.stopPropagation()}>
         <button className="info-modal__close" onClick={onClose} aria-label="Fechar">✕</button>
 
-        <div className="modal-layout-primary"> {/* Novo container para poster e conteúdo principal */}
+        <div className="modal-layout-primary">
           <img
             src={poster || '/img/placeholder.jpg'}
             alt={title === 'Carregando…' ? 'Carregando poster' : `Poster de ${title}`}
@@ -103,7 +100,6 @@ export default function InfoModal({ isOpen, onClose, movie, loading }) {
               <p><strong>Diretor:</strong> {loading ? "..." : director}</p>
             </div>
 
-            {/* ONDE ASSISTIR */}
             {!loading && watch_providers && (watch_providers.flatrate || watch_providers.buy || watch_providers.rent) && (
               <div className="watch-on-section">
                 <h3 className="info-modal__subtitle">Onde Assistir (BR)</h3>
@@ -117,8 +113,7 @@ export default function InfoModal({ isOpen, onClose, movie, loading }) {
                 )}
               </div>
             )}
-            
-            {/* ELENCO */}
+
             {!loading && Array.isArray(cast) && cast.length > 0 && (
               <>
                 <h3 className="info-modal__subtitle">Elenco Principal</h3>
@@ -139,8 +134,7 @@ export default function InfoModal({ isOpen, onClose, movie, loading }) {
             )}
           </div>
         </div>
-        
-        {/* TRAILER */}
+
         {!loading && trailer_key && (
           <div className="trailer-section">
             <h3 className="info-modal__subtitle trailer-title">Trailer Oficial</h3>

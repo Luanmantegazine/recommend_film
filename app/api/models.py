@@ -116,3 +116,23 @@ class Creator(BaseModel):
     name: str
     gender: Optional[int] = None
     profile_path: Optional[str] = None
+
+
+class UserBase(BaseModel):
+    username: str
+
+
+class User(UserBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class GoogleToken(BaseModel):
+    code: str

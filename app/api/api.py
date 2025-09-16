@@ -1,21 +1,26 @@
-from __future__ import annotations
-
 import uvicorn
+import httpx
+import os
 from typing import List
 from starlette.concurrency import run_in_threadpool
+from sqlalchemy.orm import Session
+from app.api.database import SessionLocal, engine
 
-from models import (MovieBrief, MovieDetail, Cast, RecResp, Provider, WatchProviderRegionDetails,
+from app.api import db_models, security
+from app.api.models import (MovieBrief, MovieDetail, Cast, RecResp, Provider, WatchProviderRegionDetails,
                     PaginatedMovieResponse, TVSeriesDetail,
-                    PaginatedTVSeriesResponse, TVSeriesBrief, Creator)
+                    PaginatedTVSeriesResponse, TVSeriesBrief, GoogleToken)
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request, Depends
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from app.api.processing.preprocess import TMDBRecommender
 
 from fastapi.middleware.cors import CORSMiddleware
-from processing.client import (discover_movies, movie_details, IMG_W185, IMG_W500, fetch_person_photo,
+from app.api.processing.client import (discover_movies, movie_details, IMG_W185, IMG_W500, fetch_person_photo,
                                search_movie, discover_tv_shows, IMG_W1280, IMG_W780, tv_series_details)
 
 rec_engine = TMDBRecommender(pages=20, year_from=2000)
+db_models.Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Movie Recommender API",
     openapi_prefix="/api"
@@ -27,6 +32,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 @app.get("/movies", response_model=PaginatedMovieResponse, tags=["Movies"])
@@ -60,6 +76,51 @@ def get_movies(
         total_pages=tmdb_data.get("total_pages"),
         total_results=tmdb_data.get("total_results")
     )
+
+
+@app.post("/auth/google")
+async def auth_google(token: GoogleToken, db: Session = Depends(get_db)):
+    token_url = "https://oauth2.googleapis.com/token"
+    data = {
+        "code": token.code,
+        "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+        "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+        "redirect_uri": "http://localhost:5173",
+        "grant_type": "authorization_code",
+    }
+    async with httpx.AsyncClient() as client:
+        google_response = await client.post(token_url, data=data)
+        if google_response.status_code != 200:
+            raise HTTPException(status_code=400, detail="Could not validate Google token")
+
+        id_token = google_response.json().get("id_token")
+
+    user_info_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}"
+    async with httpx.AsyncClient() as client:
+        user_info_response = await client.get(user_info_url)
+        user_info = user_info_response.json()
+
+    google_id = user_info.get("sub")
+    email = user_info.get("email")
+    username = email.split('@')[0]
+
+    user = db.query(db_models.User).filter(db_models.User.google_id == google_id).first()
+
+    is_new_user = False
+    if not user:
+        is_new_user = True
+        user = db_models.User(
+            username=username,
+            email=email,
+            google_id=google_id,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    access_token = security.create_access_token(data={"sub": user.username})
+
+    return {"access_token": access_token, "token_type": "bearer", "is_new_user": is_new_user}
 
 
 @app.get("/details/{movie_id}", response_model=MovieDetail, tags=["Movies"])

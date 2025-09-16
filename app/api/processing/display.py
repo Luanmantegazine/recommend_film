@@ -1,4 +1,3 @@
-import os
 import logging
 from pathlib import Path
 from typing import Tuple
@@ -7,7 +6,7 @@ import joblib
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from app.api.processing import preprocess
+import preprocess
 
 logger = logging.getLogger(__name__)
 

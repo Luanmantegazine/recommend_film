@@ -11,8 +11,8 @@ from app.api.models import (MovieBrief, MovieDetail, Cast, RecResp, Provider, Wa
                     PaginatedMovieResponse, TVSeriesDetail,
                     PaginatedTVSeriesResponse, TVSeriesBrief, GoogleToken)
 
-from fastapi import FastAPI, HTTPException, Query, Request, Depends
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import FastAPI, HTTPException, Query, Depends
+from fastapi.security import OAuth2PasswordBearer
 from app.api.processing.preprocess import TMDBRecommender
 
 from fastapi.middleware.cors import CORSMiddleware

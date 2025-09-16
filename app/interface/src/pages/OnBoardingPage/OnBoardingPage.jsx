@@ -3,7 +3,7 @@ import { useInfiniteMovies } from '@/hooks/useMovies';
 import { useNavigate } from 'react-router-dom';
 import MovieCard from '@/components/MovieCard/MovieCard';
 import api from '@/api';
-import './OnboardingPage.css';
+import './OnBoardingPage.css';
 
 export default function OnboardingPage() {
     const [selectedIds, setSelectedIds] = useState([]);

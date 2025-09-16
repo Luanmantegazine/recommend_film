@@ -4,7 +4,7 @@ import { useAuth } from './context/AuthContext';
 
 import HomePage from './pages/Home/home';
 import LoginPage from './pages/LoginPage/LoginPage';
-import OnboardingPage from './pages/OnboardingPage/OnboardingPage';
+import OnboardingPage from './pages/OnBoardingPage/OnBoardingPage';
 import ForYouPage from './pages/ForYou/ForYou';
 import ReleaseMoviesPage from './pages/ReleaseMoviesPage/ReleaseMoviePage';
 import TVSeriesReleasePage from './pages/TVSeriesRealeasePage/TVSeriesRealeasePage';

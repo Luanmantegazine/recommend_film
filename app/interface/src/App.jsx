@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { BrowserRouter, Routes, Route, NavLink, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 

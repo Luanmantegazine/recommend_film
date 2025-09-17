@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import App from './App.jsx';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider } from '@/context/AuthContext';
 import './App.css';
 import './index.css';
 

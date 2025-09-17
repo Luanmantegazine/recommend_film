@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import './home.css';
 
@@ -37,8 +36,8 @@ export default function HomePage() {
               Navegue pelos filmes mais recentes, veja o que está em alta e adicione
               novos títulos à sua lista para assistir.
             </p>
-            <Link to="/lancamentos" className="cta-button">
-              Ver Lançamentos
+            <Link to="/lancamentos/filmes" className="cta-button">
+              Ver Lançamentos de Filmes
             </Link>
           </div>
           <div className="feature-card">
@@ -49,6 +48,15 @@ export default function HomePage() {
             </p>
             <Link to="/me-recomende" className="cta-button">
               Encontrar Recomendações
+            </Link>
+          </div>
+          <div className="feature-card">
+            <h3 className="feature-title">Descobrir Séries Recentes</h3>
+            <p className="feature-text">
+              Explore rapidamente as estreias de TV que acabaram de chegar aos catálogos de streaming.
+            </p>
+            <Link to="/lancamentos/series" className="cta-button">
+              Ver Lançamentos de Séries
             </Link>
           </div>
         </div>

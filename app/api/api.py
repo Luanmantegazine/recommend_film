@@ -1,23 +1,46 @@
-import uvicorn
-import httpx
+import logging
 import os
-from typing import List
-from starlette.concurrency import run_in_threadpool
+from typing import Annotated, List
+
+import httpx
+import uvicorn
+from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError
 from sqlalchemy.orm import Session
-from app.api.database import SessionLocal, engine
+from starlette.concurrency import run_in_threadpool
 
 from app.api import db_models, security
-from app.api.models import (MovieBrief, MovieDetail, Cast, RecResp, Provider, WatchProviderRegionDetails,
-                    PaginatedMovieResponse, TVSeriesDetail,
-                    PaginatedTVSeriesResponse, TVSeriesBrief, GoogleToken)
-
-from fastapi import FastAPI, HTTPException, Query, Depends
-from fastapi.security import OAuth2PasswordBearer
+from app.api.database import SessionLocal, engine
+from app.api.models import (
+    Cast,
+    FavoriteMoviesPayload,
+    FavoriteMoviesResponse,
+    GoogleToken,
+    MovieBrief,
+    MovieDetail,
+    PaginatedMovieResponse,
+    PaginatedTVSeriesResponse,
+    Provider,
+    RecResp,
+    TVSeriesBrief,
+    TVSeriesDetail,
+    WatchProviderRegionDetails,
+)
+from app.api.processing.client import (
+    IMG_W1280,
+    IMG_W185,
+    IMG_W500,
+    IMG_W780,
+    discover_movies,
+    discover_tv_shows,
+    fetch_person_photo,
+    movie_details,
+    search_movie,
+    tv_series_details,
+)
 from app.api.processing.preprocess import TMDBRecommender
-
-from fastapi.middleware.cors import CORSMiddleware
-from app.api.processing.client import (discover_movies, movie_details, IMG_W185, IMG_W500, fetch_person_photo,
-                               search_movie, discover_tv_shows, IMG_W1280, IMG_W780, tv_series_details)
 
 rec_engine = TMDBRecommender(pages=20, year_from=2000)
 db_models.Base.metadata.create_all(bind=engine)
@@ -26,9 +49,11 @@ app = FastAPI(
     openapi_prefix="/api"
 )
 
+logger = logging.getLogger(__name__)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -43,6 +68,31 @@ def get_db():
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Session = Depends(get_db),
+):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Não foi possível validar as credenciais",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = security.decode_access_token(token)
+    except JWTError as exc:  # pragma: no cover - JWT errors mapped to 401
+        raise credentials_exception from exc
+
+    username: str | None = payload.get("sub")
+    if not username:
+        raise credentials_exception
+
+    user = db.query(db_models.User).filter(db_models.User.username == username).first()
+    if not user:
+        raise credentials_exception
+
+    return user
 
 
 @app.get("/movies", response_model=PaginatedMovieResponse, tags=["Movies"])
@@ -121,6 +171,97 @@ async def auth_google(token: GoogleToken, db: Session = Depends(get_db)):
     access_token = security.create_access_token(data={"sub": user.username})
 
     return {"access_token": access_token, "token_type": "bearer", "is_new_user": is_new_user}
+
+
+@app.post(
+    "/users/me/favorites",
+    response_model=FavoriteMoviesResponse,
+    tags=["Users"],
+)
+def set_user_favorites(
+    payload: FavoriteMoviesPayload,
+    current_user: db_models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    movie_ids = {mid for mid in payload.movie_ids if isinstance(mid, int) and mid > 0}
+    if not movie_ids:
+        raise HTTPException(status_code=400, detail="Informe ao menos um identificador de filme válido.")
+
+    favorites_to_persist: list[db_models.FavoriteMovie] = []
+    for movie_id in sorted(movie_ids):
+        try:
+            details = movie_details(movie_id, lang="pt-BR")
+        except Exception as exc:  # pragma: no cover - mapeia falhas da API externa
+            logger.warning("Falha ao obter detalhes do filme %s: %s", movie_id, exc)
+            continue
+
+        title = details.get("title") or details.get("name")
+        if not title:
+            logger.warning("Detalhes do filme %s não possuem título", movie_id)
+            continue
+
+        favorites_to_persist.append(
+            db_models.FavoriteMovie(
+                user_id=current_user.id,
+                movie_id=movie_id,
+                title=title,
+            )
+        )
+
+    if not favorites_to_persist:
+        raise HTTPException(status_code=400, detail="Não foi possível salvar os filmes informados.")
+
+    (
+        db.query(db_models.FavoriteMovie)
+        .filter(db_models.FavoriteMovie.user_id == current_user.id)
+        .delete(synchronize_session=False)
+    )
+    db.add_all(favorites_to_persist)
+    db.commit()
+
+    return FavoriteMoviesResponse(saved=len(favorites_to_persist))
+
+
+@app.get(
+    "/users/me/recommendations",
+    response_model=List[RecResp],
+    tags=["Users"],
+)
+def get_user_recommendations(
+    current_user: db_models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    favorites = (
+        db.query(db_models.FavoriteMovie)
+        .filter(db_models.FavoriteMovie.user_id == current_user.id)
+        .all()
+    )
+    if not favorites:
+        return []
+
+    aggregated: list[RecResp] = []
+    seen_ids = {fav.movie_id for fav in favorites}
+
+    for favorite in favorites:
+        try:
+            suggestions = rec_engine.recommend(title=favorite.title, top_k=30)
+        except Exception as exc:  # pragma: no cover - erros do motor não previstos
+            logger.warning("Falha ao gerar recomendações para '%s': %s", favorite.title, exc)
+            continue
+
+        for suggestion in suggestions:
+            suggested_id = suggestion.get("movie_id")
+            if suggested_id is None:
+                continue
+            if suggested_id in seen_ids or any(r.movie_id == suggested_id for r in aggregated if r.movie_id is not None):
+                continue
+
+            aggregated.append(RecResp(**suggestion))
+            seen_ids.add(suggested_id)
+            if len(aggregated) >= 30:
+                return aggregated
+
+    return aggregated
 
 
 @app.get("/details/{movie_id}", response_model=MovieDetail, tags=["Movies"])

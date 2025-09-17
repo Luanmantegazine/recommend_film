@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useInfiniteMovies } from '@/hooks/useMovies';
 import { useNavigate } from 'react-router-dom';
 import MovieCard from '@/components/MovieCard/MovieCard';
@@ -11,7 +11,16 @@ export default function OnboardingPage() {
 
     // Busca filmes populares para o usuário escolher
     const { data: moviesData, isLoading } = useInfiniteMovies('popularity.desc', 500);
-    const movies = moviesData?.pages.flatMap(page => page.results).slice(0, 20) || [];
+    const movies = useMemo(() => {
+        if (!moviesData?.pages) {
+            return [];
+        }
+
+        return moviesData.pages
+            .flatMap(page => (Array.isArray(page?.results) ? page.results : []))
+            .filter(Boolean)
+            .slice(0, 20);
+    }, [moviesData]);
 
     const toggleSelection = (movieId) => {
         setSelectedIds(prev =>

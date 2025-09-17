@@ -1,5 +1,5 @@
 // src/pages/RecommendationFinderPage.jsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useDebounce } from '@/hooks/useDebounc';
 import { useSearch } from '@/hooks/useSearch';
 import { useRecommend } from '@/hooks/useRecommend';
@@ -60,24 +60,23 @@ export default function RecommendationFinderPage() {
         {debouncedSearchQuery && searchResults && !selectedMovieDisplay && (
           <div className="search-results-container">
             {searchResults.length === 0 && !isSearching && (
-              <p className="search-status p-3 text-sm">Nenhum filme encontrado para "{debouncedSearchQuery}".</p>
+              <p className="search-status p-3 text-sm">Nenhum filme encontrado para “{debouncedSearchQuery}”.</p>
             )}
             {searchResults.length > 0 && (
-                // <h3 className="p-2 text-sm font-semibold">Resultados:</h3> Se quiser título
-                <ul className="search-results-list">
+              <ul className="search-results-list">
                 {searchResults.slice(0, 10).map((movie) => (
-                    <li
+                  <li
                     key={getItemId(movie)}
                     className="search-result-item"
                     onClick={() => handleSelectMovie(movie)}
-                    >
+                  >
                     {movie.poster && (
-                        <img src={movie.poster} alt={`Poster de ${movie.title}`} />
+                      <img src={movie.poster} alt={`Poster de ${movie.title}`} />
                     )}
                     <span>{movie.title} ({movie.year || 'N/A'})</span>
-                    </li>
+                  </li>
                 ))}
-                </ul>
+              </ul>
             )}
           </div>
         )}

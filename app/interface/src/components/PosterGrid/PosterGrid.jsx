@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import PropTypes from 'prop-types';
 import InfoModal from "@/components/InfoModal/InfoModal";
 import MovieCard from '../MovieCard/MovieCard';
@@ -84,4 +84,4 @@ PosterGrid.propTypes = {
     })
   ).isRequired,
   className: PropTypes.string,
-};;
+};

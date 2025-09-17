@@ -1,4 +1,3 @@
-import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/api';
 import PosterGrid from '@/components/PosterGrid/PosterGrid';
@@ -32,7 +31,7 @@ export default function ForYouPage() {
             )}
 
             {recommendations && recommendations.length === 0 && (
-                 <p className="status-message">Ainda não temos recomendações. Favorite mais filmes para nos ajudar!</p>
+              <p className="status-message">Ainda não temos recomendações. Favorite mais filmes para nos ajudar!</p>
             )}
         </div>
     );

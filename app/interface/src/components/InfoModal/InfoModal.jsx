@@ -1,5 +1,5 @@
-import React from 'react';
 import YouTube from 'react-youtube';
+import PropTypes from 'prop-types';
 import './InfoModal.css';
 
 
@@ -22,7 +22,6 @@ export default function InfoModal({ isOpen, onClose, movie, loading }) {
   } = movie || {};
 
   const renderStars = (rating) => {
-    const starsTotal = 5;
     const starPercentage = (rating / 10) * 100;
     const starPercentageRounded = `${Math.round(starPercentage / 10) * 10}%`;
     return (
@@ -30,7 +29,36 @@ export default function InfoModal({ isOpen, onClose, movie, loading }) {
         <div className="stars-inner" style={{ width: starPercentageRounded }}></div>
       </div>
     );
-  };
+};
+
+InfoModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  movie: PropTypes.shape({
+    title: PropTypes.string,
+    overview: PropTypes.string,
+    genres: PropTypes.arrayOf(PropTypes.string),
+    director: PropTypes.string,
+    cast: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+        name: PropTypes.string,
+        photo: PropTypes.string,
+      })
+    ),
+    poster: PropTypes.string,
+    vote_average: PropTypes.number,
+    vote_count: PropTypes.number,
+    trailer_key: PropTypes.string,
+    watch_providers: PropTypes.shape({
+      link: PropTypes.string,
+      flatrate: PropTypes.array,
+      rent: PropTypes.array,
+      buy: PropTypes.array,
+    }),
+  }),
+  loading: PropTypes.bool,
+};
   
   const optsYouTube = {
     height: '390',

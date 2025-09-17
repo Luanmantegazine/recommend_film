@@ -136,3 +136,11 @@ class Token(BaseModel):
 
 class GoogleToken(BaseModel):
     code: str
+
+
+class FavoriteMoviesPayload(BaseModel):
+    movie_ids: List[int] = Field(..., min_length=1)
+
+
+class FavoriteMoviesResponse(BaseModel):
+    saved: int

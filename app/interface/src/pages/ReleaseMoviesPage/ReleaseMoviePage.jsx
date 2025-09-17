@@ -1,5 +1,5 @@
 // src/pages/ReleaseMoviesPage.jsx
-import React, { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import PosterGrid from '@/components/PosterGrid/PosterGrid';
 import { useInfiniteMovies } from '@/hooks/useMovies';
 import { useInView } from 'react-intersection-observer';
@@ -16,37 +16,15 @@ export default function ReleaseMoviesPage() {
     error,
   } = useInfiniteMovies('primary_release_date.desc', 50);
 
-  // DEBUG: Inspecionar os dados das páginas
-  useEffect(() => {
-    if (data?.pages) {
-      console.log("Dados brutos de data.pages:", data.pages);
-      data.pages.forEach((page, index) => {
-        if (!page || !page.results) {
-          console.warn(`Página ${index + 1} está malformada ou sem results:`, page);
-        } else if (page.results.some(movie => movie === undefined || movie === null)) {
-          console.warn(`Página ${index + 1} contém filmes undefined/null em results:`, page.results);
-        }
-      });
+  const movies = useMemo(() => {
+    if (!data?.pages) {
+      return [];
     }
+
+    return data.pages
+      .flatMap((page) => (Array.isArray(page?.results) ? page.results : []))
+      .filter(Boolean);
   }, [data]);
-
-  // AJUSTE: Tornar a construção do array 'movies' mais segura
-  const movies = data?.pages.reduce((acc, page) => {
-    if (page && Array.isArray(page.results)) {
-      // Filtra quaisquer itens nulos ou indefinidos dentro de page.results
-      const validResults = page.results.filter(movie => movie != null);
-      acc.push(...validResults);
-    }
-    return acc;
-  }, []) || [];
-
-  // DEBUG: Ver o array 'movies' processado
-  useEffect(() => {
-    if (movies.length > 0 && movies.some(movie => movie === undefined || movie === null)) {
-        console.error("Array 'movies' final contém undefined/null:", movies);
-    }
-  }, [movies]);
-
 
   const { ref, inView } = useInView({
     threshold: 0.5,

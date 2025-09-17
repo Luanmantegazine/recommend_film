@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import {
   createContext,
   useState,
@@ -58,8 +59,29 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      persistToken(newToken);
-      setToken(newToken);
+      try {
+        const decoded = jwtDecode(newToken);
+
+        if (!decoded?.exp || decoded.exp * 1000 <= Date.now()) {
+          throw new Error('Token expirado ou inválido');
+        }
+
+        const username = decoded?.sub;
+
+        if (typeof username !== 'string' || username.length === 0) {
+          throw new Error('Token sem identificador de usuário');
+        }
+
+        const authenticatedUser = { username };
+
+        setUser(authenticatedUser);
+        api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
+        persistToken(newToken);
+        setToken(newToken);
+      } catch (error) {
+        console.error('Falha ao processar token de login:', error);
+        logout();
+      }
     },
     [logout],
   );
@@ -75,8 +97,25 @@ export const AuthProvider = ({ children }) => {
       const decoded = jwtDecode(token);
 
       if (decoded?.exp && decoded.exp * 1000 > Date.now()) {
-        setUser({ username: decoded.sub });
         api.defaults.headers.common.Authorization = `Bearer ${token}`;
+
+        const nextUser =
+          typeof decoded?.sub === 'string' && decoded.sub.length > 0
+            ? { username: decoded.sub }
+            : null;
+
+        if (!nextUser) {
+          logout();
+          return;
+        }
+
+        setUser((previousUser) => {
+          if (previousUser?.username === nextUser.username) {
+            return previousUser;
+          }
+
+          return nextUser;
+        });
       } else {
         logout();
       }
@@ -85,6 +124,26 @@ export const AuthProvider = ({ children }) => {
       logout();
     }
   }, [token, logout]);
+
+  const contextValue = useMemo(
+    () => ({
+      token,
+      user,
+      login,
+      logout,
+    }),
+    [token, user, login, logout],
+  );
+
+  return (
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
+  );
+};
+
+AuthProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
 

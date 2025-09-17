@@ -1,5 +1,5 @@
 // src/pages/TVSeriesReleasePage.jsx (NOVO)
-import React, { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import PosterGrid from '@/components/PosterGrid/PosterGrid';
 import { useInfiniteTVSeries } from '@/hooks/useInfiniteTVSeries'; // Novo hook
 import { useInView } from 'react-intersection-observer';
@@ -29,7 +29,15 @@ export default function TVSeriesReleasePage() {
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const series = data?.pages.flatMap(page => page.results) || [];
+  const series = useMemo(() => {
+    if (!data?.pages) {
+      return [];
+    }
+
+    return data.pages
+      .flatMap((page) => (Array.isArray(page?.results) ? page.results : []))
+      .filter(Boolean);
+  }, [data]);
 
   return (
     <div className="page-container p-4 sm:p-6 w-full max-w-7xl mx-auto">
@@ -48,7 +56,7 @@ export default function TVSeriesReleasePage() {
       )}
 
       {!isLoading && !isError && series.length > 0 && (
-        <PosterGrid items={series} /> // PosterGrid deve funcionar para séries se os dados (id, name/title, poster_url) forem compatíveis
+        <PosterGrid items={series} />
       )}
 
       <div className="load-more-trigger" ref={ref}>

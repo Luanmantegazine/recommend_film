@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, NavLink, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 
@@ -19,8 +18,12 @@ const AppTitle = () => {
 
 // Componente para proteger rotas
 const ProtectedRoute = ({ children }) => {
-    const { user } = useAuth();
-    return user ? children : <Navigate to="/login" />;
+  const { user } = useAuth();
+  return user ? children : <Navigate to="/login" />;
+};
+
+ProtectedRoute.propTypes = {
+  children: PropTypes.node.isRequired,
 };
 
 export default function App() {

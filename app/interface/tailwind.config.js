@@ -1,11 +1,14 @@
-module.exports = {
+import lineClamp from '@tailwindcss/line-clamp';
+import tailwindScrollbar from 'tailwind-scrollbar';
+
+export default {
   content: [
     './app/interface/index.html',
     './app/interface/src/**/*.{js,jsx,ts,tsx}',
   ],
   theme: { extend: {} },
   plugins: [
-  require('@tailwindcss/line-clamp'),
-  require('tailwind-scrollbar')({ nocompatible: true })
-]
+    lineClamp,
+    tailwindScrollbar({ nocompatible: true }),
+  ],
 };

@@ -1,5 +1,5 @@
 import ReactPaginate from "react-paginate";
-import React from "react";
+import PropTypes from 'prop-types';
 
 const Pagination = ({ pageCount, onPageChange }) => (
   <ReactPaginate
@@ -17,3 +17,8 @@ const Pagination = ({ pageCount, onPageChange }) => (
 );
 
 export default Pagination;
+
+Pagination.propTypes = {
+  pageCount: PropTypes.number.isRequired,
+  onPageChange: PropTypes.func.isRequired,
+};

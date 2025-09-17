@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route, NavLink, useNavigate, Navigate } from 'react-router-dom';
-import PropTypes from 'prop-types';
 import { useAuth } from '@/context/AuthContext';
 
 import HomePage from './pages/Home/home';

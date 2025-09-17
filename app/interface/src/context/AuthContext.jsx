@@ -6,7 +6,6 @@ import {
   useMemo,
   useCallback,
 } from 'react';
-import PropTypes from 'prop-types';
 import { jwtDecode } from 'jwt-decode';
 import api from '../api';
 
@@ -86,29 +85,6 @@ export const AuthProvider = ({ children }) => {
       logout();
     }
   }, [token, logout]);
-
-  const value = useMemo(
-    () => ({
-      user,
-      token,
-      login,
-      logout,
-    }),
-    [user, token, login, logout],
-  );
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-AuthProvider.propTypes = {
-  children: PropTypes.node.isRequired,
-};
-
-// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
 

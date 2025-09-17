@@ -189,7 +189,7 @@ def details(movie_id: int):
         vote_average=round(vote_average, 1) if vote_average is not None else None,
         vote_count=vote_count,
         trailer_key=trailer_key,
-        watch_providers_data=watch_providers_data,
+        watch_providers=watch_providers_data,
 
     )
 
